@@ -3421,7 +3421,7 @@
          only applies to full users, not profiles, should be updated accordingly as needed.
          TODO(b/435521983): Remove this since it's now made redundant by config_multiuserMaximumUsers
          -->
-    <bool name="config_enableMultiUserUI">false</bool>
+    <bool name="config_enableMultiUserUI">true</bool>
 
     <!-- Indicates the boot strategy in Headless System User Mode (HSUM)
          This config has no effect if the device is not in HSUM.
