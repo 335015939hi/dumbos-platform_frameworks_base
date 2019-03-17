@@ -51,5 +51,9 @@
         <public name="missing_sensors_permission_title"/>
         <!-- @hide -->
         <public name="missing_sensors_permission_message"/>
+        <!-- @hide -->
+        <public name="permgrouplab_network"/>
+        <!-- @hide -->
+        <public name="permgroupdesc_network"/>
     </staging-public-group>
 </resources>
