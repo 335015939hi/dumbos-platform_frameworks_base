@@ -19,5 +19,7 @@
     <staging-public-group type="string" first-id="0x0198f000">
         <!-- @hide -->
         <public name="config_first_party_app_source_package_name"/>
+        <!-- @hide -->
+        <public name="config_systemTelephonyPackage"/>
     </staging-public-group>
 </resources>
