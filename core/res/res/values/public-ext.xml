@@ -25,5 +25,13 @@
         <public name="prototype_device_notification_title"/>
         <!-- @hide -->
         <public name="prototype_device_notification_message"/>
+        <!-- @hide -->
+        <public name="notification_channel_other_users"/>
+        <!-- @hide -->
+        <public name="notification_channel_other_users_description"/>
+        <!-- @hide -->
+        <public name="other_users_notification_title"/>
+        <!-- @hide -->
+        <public name="other_users_notification_switch_user_action"/>
     </staging-public-group>
 </resources>
