@@ -63,5 +63,7 @@
         <public name="aerr_show_details"/>
         <!-- @hide -->
         <public name="config_gnssPsdsType"/>
+        <!-- @hide -->
+        <public name="bluetooth_auto_off_attribution_label"/>
     </staging-public-group>
 </resources>
