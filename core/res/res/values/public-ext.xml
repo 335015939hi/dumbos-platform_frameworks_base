@@ -55,5 +55,7 @@
         <public name="permgrouplab_network"/>
         <!-- @hide -->
         <public name="permgroupdesc_network"/>
+        <!-- @hide -->
+        <public name="aerr_show_details"/>
     </staging-public-group>
 </resources>
