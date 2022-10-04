@@ -43,5 +43,13 @@
         <public name="permlab_otherSensors"/>
         <!-- @hide -->
         <public name="permdesc_otherSensors"/>
+        <!-- @hide -->
+        <public name="notification_action_dont_show_again"/>
+        <!-- @hide -->
+        <public name="notification_channel_missing_permission"/>
+        <!-- @hide -->
+        <public name="missing_sensors_permission_title"/>
+        <!-- @hide -->
+        <public name="missing_sensors_permission_message"/>
     </staging-public-group>
 </resources>
