@@ -35,5 +35,13 @@
         <public name="other_users_notification_title"/>
         <!-- @hide -->
         <public name="other_users_notification_switch_user_action"/>
+        <!-- @hide -->
+        <public name="permgrouplab_otherSensors"/>
+        <!-- @hide -->
+        <public name="permgroupdesc_otherSensors"/>
+        <!-- @hide -->
+        <public name="permlab_otherSensors"/>
+        <!-- @hide -->
+        <public name="permdesc_otherSensors"/>
     </staging-public-group>
 </resources>
