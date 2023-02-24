@@ -168,11 +168,23 @@ fun CredentialScreen(
                 @Composable {
                     when (credentialKind) {
                         PromptKind.Pin -> {
+                            val context = androidx.compose.ui.platform.LocalContext.current
+
+                            val userId = header.user.deviceCredentialOwnerId
+                            val digitMap = androidx.compose.runtime.remember(userId) {
+                                val arr = IntArray(10) { i -> i }
+                                val setting = android.ext.settings.ExtSettings.SCRAMBLE_LOCKSCREEN_PIN_LAYOUT_PRIMARY
+                                if (setting.get(context, userId)) {
+                                    arr.shuffle()
+                                }
+                                arr
+                            }
                             CredentialPinView(
                                 onVerify = verifyPinPassAction,
                                 onSuccess = { credential -> handleSuccess(credential) },
                                 onPinPress = viewModel::performPinPressFeedback,
                                 isVisible = currentView == BiometricPromptView.CREDENTIAL,
+                                digitMap = digitMap,
                                 error = errorMessage,
                             )
                         }

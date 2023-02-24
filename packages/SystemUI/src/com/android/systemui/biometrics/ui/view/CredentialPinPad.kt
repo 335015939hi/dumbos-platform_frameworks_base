@@ -51,6 +51,7 @@ fun CredentialPinPad(
     onEnterClick: () -> Unit,
     isInputEnabled: Boolean,
     deleteButtonAppearance: ActionButtonAppearance,
+    digitMap: IntArray,
     verticalSpacing: Dp = 8.dp,
     horizontalSpacing: Dp = 14.dp,
 ) {
@@ -65,7 +66,7 @@ fun CredentialPinPad(
                     for (i in 0 until 3) {
                         Row(horizontalArrangement = Arrangement.spacedBy(horizontalSpacing)) {
                             for (j in 1..3) {
-                                val digit = (i * 3) + j
+                                val digit = digitMap[(i * 3) + j]
                                 DigitButton(
                                     digit = digit,
                                     isInputEnabled = isInputEnabled,
@@ -100,10 +101,12 @@ fun CredentialPinPad(
                             backgroundColor = MaterialTheme.colorScheme.primaryContainer,
                         )
 
+                        val zeroDigit = digitMap[0]
+
                         DigitButton(
-                            digit = 0,
+                            digit = zeroDigit,
                             isInputEnabled = isInputEnabled,
-                            onClicked = { onDigitClick("0") },
+                            onClicked = { onDigitClick(zeroDigit.toString()) },
                             onPointerDown = {},
                             scaling = { 1f },
                             isAnimationEnabled = true,

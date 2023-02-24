@@ -54,6 +54,7 @@ fun CredentialPinView(
     onSuccess: (ByteArray) -> Unit,
     onPinPress: () -> Unit,
     isVisible: Boolean,
+    digitMap: IntArray,
     error: String = "",
 ) {
     var pinText by remember { mutableStateOf("") }
@@ -163,6 +164,7 @@ fun CredentialPinView(
             },
             isInputEnabled = isVisible,
             deleteButtonAppearance = ActionButtonAppearance.Shown,
+            digitMap = digitMap,
         )
     }
 }
