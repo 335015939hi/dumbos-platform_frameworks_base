@@ -7959,6 +7959,11 @@
     <!-- Action for opening trusted location settings page [CHAR LIMIT=NONE] [DO NOT TRANSLATE] -->
     <string name="trusted_location_settings_action" translatable="false"></string>
 
+
+    <bool name="config_Google_apps_can_have_special_access_to_accelerators">false</bool>
+    <java-symbol type="bool" name="config_Google_apps_can_have_special_access_to_accelerators" />
+    <bool name="config_GoogleCamera_needs_seinfo_for_access_to_accelerators">false</bool>
+    <java-symbol type="bool" name="config_GoogleCamera_needs_seinfo_for_access_to_accelerators" />
     <!-- The delay in milliseconds to suppress the toast after the user presses the
          power button. -->
     <integer name="config_turnOffTvToastSuppressionDelayMs">0</integer>
