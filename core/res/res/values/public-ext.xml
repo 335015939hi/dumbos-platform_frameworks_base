@@ -61,5 +61,7 @@
         <public name="permgroupdesc_network"/>
         <!-- @hide -->
         <public name="aerr_show_details"/>
+        <!-- @hide -->
+        <public name="config_gnssPsdsType"/>
     </staging-public-group>
 </resources>
