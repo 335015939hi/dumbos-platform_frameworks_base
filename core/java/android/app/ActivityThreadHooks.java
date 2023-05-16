@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.os.Process;
 import android.util.Log;
 
+import com.android.internal.app.ContactScopes;
 import com.android.internal.app.StorageScopesAppHooks;
 import com.android.internal.gmscompat.GmsHooks;
 import com.android.internal.util.Preconditions;
@@ -85,6 +86,7 @@ class ActivityThreadHooks {
             }
         }
         StorageScopesAppHooks.maybeEnable(state);
+        ContactScopes.maybeEnable(ctx, state);
     }
 
     static Service instantiateService(String className) {
