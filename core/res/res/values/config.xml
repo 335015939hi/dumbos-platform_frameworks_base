@@ -1555,7 +1555,7 @@
          entering the PIN on the lockscreen.
          False means animations should be enabled by default.
          True means animations should be disabled by default. -->
-    <bool name="config_lockPinEnhancedPrivacyDefault">false</bool>
+    <bool name="config_lockPinEnhancedPrivacyDefault">true</bool>
 
     <!-- Default value for the setting that controls whether lock pattern is visible as user enters.
          True means the pattern should be visible by default.

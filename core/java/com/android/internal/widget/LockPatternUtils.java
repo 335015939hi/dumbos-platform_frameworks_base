@@ -1123,7 +1123,7 @@ public class LockPatternUtils {
      * @return Whether enhanced pin privacy is enabled.
      */
     public boolean isPinEnhancedPrivacyEnabled(int userId) {
-        boolean defaultValue = false;
+        boolean defaultValue = true;
         if (enableDefaultVisibilityForSensitiveInputs()) {
             defaultValue =
                     mContext.getResources()

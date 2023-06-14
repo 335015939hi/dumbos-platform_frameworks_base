@@ -583,7 +583,8 @@ public class LockPatternUtilsTest {
     @DisableFlags(Flags.FLAG_ENABLE_DEFAULT_VISIBILITY_FOR_SENSITIVE_INPUTS)
     public void isPinEnhancedPrivacyEnabled_OldDefault() throws RemoteException {
         configureSensitiveInputVisibilityTest();
-        assertFalse(mLockPatternUtils.isPinEnhancedPrivacyEnabled(USER_ID));
+        // GrapheneOS change: PIN enhanced privacy defaults to true, regardless of hw keyboard
+        assertTrue(mLockPatternUtils.isPinEnhancedPrivacyEnabled(USER_ID));
     }
 
     private static ParcelDuration asParcel(Duration duration) {
