@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <staging-public-group type="array" first-id="0x0195f000">
+        <!-- @hide -->
+        <public name="system_browser_package_names"/>
     </staging-public-group>
 
     <staging-public-group type="bool" first-id="0x018bf000">
