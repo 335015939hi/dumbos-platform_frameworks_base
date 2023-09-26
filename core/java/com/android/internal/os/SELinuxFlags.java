@@ -3,6 +3,7 @@ package com.android.internal.os;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.GosPackageState;
+import android.ext.settings.app.AswDenyNativeDebug;
 import android.os.Build;
 import android.os.Process;
 import android.os.SystemProperties;
@@ -57,6 +58,10 @@ public class SELinuxFlags {
     static long get(Context ctx, int userId, ApplicationInfo appInfo,
                     GosPackageState ps, boolean isIsolatedProcess) {
         long res = ALL_RESTRICTIONS;
+
+        if (!AswDenyNativeDebug.I.get(ctx, userId, appInfo, ps)) {
+            res &= ~DENY_PROCESS_PTRACE;
+        }
 
         return res;
     }
