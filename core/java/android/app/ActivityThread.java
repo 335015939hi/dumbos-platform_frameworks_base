@@ -8277,9 +8277,7 @@ public final class ActivityThread extends ClientTransactionHandler
             dalvik.system.VMRuntime.getRuntime().clampGrowthLimit();
         }
 
-        if (extraAppBindArgs != null) {
-            ActivityThreadHooks.onBind2(appContext, extraAppBindArgs);
-        }
+        ActivityThreadHooks.onBind2(appContext, extraAppBindArgs);
 
         // Allow disk access during application and provider setup. This could
         // block processing ordered broadcasts, but later processing would

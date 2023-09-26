@@ -5,6 +5,12 @@
         <public name="system_browser_package_names"/>
         <!-- @hide -->
         <public name="config_httpsTimeUrls"/>
+        <!-- @hide -->
+        <public name="system_pkgs_allowed_memory_dyn_code_loading_by_default"/>
+        <!-- @hide -->
+        <public name="system_pkgs_allowed_storage_dyn_code_loading_by_default"/>
+        <!-- @hide -->
+        <public name="system_pkgs_allowed_webview_dyn_code_loading_by_default"/>
     </staging-public-group>
 
     <staging-public-group type="bool" first-id="0x018bf000">
@@ -16,6 +22,12 @@
         <public name="config_GoogleCamera_needs_seinfo_for_access_to_accelerators"/>
         <!-- @hide -->
         <public name="setting_default_allow_native_debugging"/>
+        <!-- @hide -->
+        <public name="setting_default_restrict_memory_dyn_code_loading"/>
+        <!-- @hide -->
+        <public name="setting_default_restrict_storage_dyn_code_loading"/>
+        <!-- @hide -->
+        <public name="setting_default_restrict_webview_dyn_code_loading"/>
     </staging-public-group>
 
     <staging-public-group type="drawable" first-id="0x0194f000">
@@ -105,5 +117,9 @@
         <public name="notif_memtag_crash_title"/>
         <!-- @hide -->
         <public name="notif_hmalloc_crash_title"/>
+        <!-- @hide -->
+        <public name="notif_memory_dcl_title"/>
+        <!-- @hide -->
+        <public name="notif_storage_dcl_title"/>
     </staging-public-group>
 </resources>
