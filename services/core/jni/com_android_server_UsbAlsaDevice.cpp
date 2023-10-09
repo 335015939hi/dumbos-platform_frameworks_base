@@ -62,7 +62,7 @@ static void android_server_UsbAlsaDevice_setVolume(JNIEnv* /*env*/, jobject /*th
     mixer_close(alsaMixer);
 }
 
-static JNINativeMethod method_table[] = {
+static const JNINativeMethod method_table[] = {
         {"nativeSetVolume", "(IF)V", (void*)android_server_UsbAlsaDevice_setVolume},
 };
 
