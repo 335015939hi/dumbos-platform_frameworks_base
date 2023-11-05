@@ -28,6 +28,8 @@
         <public name="setting_default_restrict_storage_dyn_code_loading"/>
         <!-- @hide -->
         <public name="setting_default_restrict_webview_dyn_code_loading"/>
+        <!-- @hide -->
+        <public name="setting_default_force_app_memtag"/>
     </staging-public-group>
 
     <staging-public-group type="drawable" first-id="0x0194f000">
