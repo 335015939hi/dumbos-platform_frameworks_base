@@ -2416,6 +2416,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             } else if (phase == PHASE_THIRD_PARTY_APPS_CAN_START) {
                 mService.mCrashRecoveryHelper.registerConnectivityModuleHealthListener();
                 mService.scheduleHomeTimeout();
+                com.android.server.ext.SystemJournalNotif.onSystemServerInited();
             }
         }
 

@@ -95,5 +95,15 @@
         <public name="notif_action_more_info"/>
         <!-- @hide -->
         <public name="notif_native_debug_title"/>
+        <!-- @hide -->
+        <public name="notif_ch_system_journal"/>
+        <!-- @hide -->
+        <public name="process_crash_notif_title"/>
+        <!-- @hide -->
+        <public name="fsck_error_notif_title"/>
+        <!-- @hide -->
+        <public name="notif_memtag_crash_title"/>
+        <!-- @hide -->
+        <public name="notif_hmalloc_crash_title"/>
     </staging-public-group>
 </resources>
