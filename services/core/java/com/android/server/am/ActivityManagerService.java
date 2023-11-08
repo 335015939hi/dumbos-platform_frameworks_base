@@ -19389,6 +19389,11 @@ public class ActivityManagerService extends IActivityManager.Stub
                 mProcessList.dispatchGosPackageStateChangedLOSP(uid);
             }
         }
+
+        @Override
+        public ProcessRecordSnapshot getProcessRecordByPid(int pid) {
+            return mProcessList.getProcessRecordByPid(pid);
+        }
     }
 
     long inputDispatchingTimedOut(int pid, final boolean aboveSystem, TimeoutRecord timeoutRecord) {

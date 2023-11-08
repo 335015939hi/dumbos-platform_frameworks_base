@@ -99,6 +99,7 @@ import android.annotation.UserIdInt;
 import android.app.ActivityManager;
 import android.app.ActivityManager.ProcessCapability;
 import android.app.ActivityManager.ProcessState;
+import android.app.ActivityManagerInternal.ProcessRecordSnapshot;
 import android.app.ActivityThread;
 import android.app.AppGlobals;
 import android.app.AppProtoEnums;
@@ -155,6 +156,7 @@ import android.util.ArraySet;
 import android.util.DebugUtils;
 import android.util.EventLog;
 import android.util.LongSparseArray;
+import android.util.LruCache;
 import android.util.Pair;
 import android.util.Slog;
 import android.util.SparseArray;
@@ -3047,6 +3049,8 @@ public final class ProcessList extends ProcessListInternal
         return true;
     }
 
+    private final LruCache<Integer, ProcessRecord> mRecentlyRemovedProcesses = new LruCache<>(50);
+
     @GuardedBy("mService")
     @Override
     public void removeLruProcessLocked(ProcessRecordInternal appInternal) {
@@ -3054,6 +3058,8 @@ public final class ProcessList extends ProcessListInternal
         int lrui = mLruProcesses.lastIndexOf(app);
         if (lrui >= 0) {
             synchronized (mProcLock) {
+                mRecentlyRemovedProcesses.put(app.mPid, app);
+
                 if (!app.isKilled()) {
                     if (app.isPersistent()) {
                         Slog.w(TAG, "Removing persistent process that hasn't been killed: " + app);
@@ -3080,6 +3086,36 @@ public final class ProcessList extends ProcessListInternal
             }
         }
         mService.removeOomAdjTargetLocked(app, true);
+    }
+
+    private static ProcessRecordSnapshot snapshotProcessRecord(ProcessRecord pr) {
+        return new ProcessRecordSnapshot(pr.mPid, pr.uid, pr.userId, pr.processName, pr.info,
+            pr.getProcessPackageNames());
+    }
+
+    @Nullable
+    public ProcessRecordSnapshot getProcessRecordByPid(int pid) {
+        ProcessRecord pr;
+
+        var pidMap = mService.mPidsSelfLocked;
+        synchronized (pidMap) {
+            pr = pidMap.get(pid);
+        }
+
+        if (pr != null) {
+            return snapshotProcessRecord(pr);
+        }
+
+        synchronized (mService) {
+            synchronized (mProcLock) {
+                ProcessRecord rrp = mRecentlyRemovedProcesses.get(Integer.valueOf(pid));
+                if (rrp != null) {
+                    return snapshotProcessRecord(rrp);
+                }
+            }
+        }
+
+        return null;
     }
 
     @GuardedBy({"mService", "mProcLock"})
