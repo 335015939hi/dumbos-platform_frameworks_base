@@ -93,5 +93,7 @@
         <public name="notif_text_tap_to_see_details"/>
         <!-- @hide -->
         <public name="notif_action_more_info"/>
+        <!-- @hide -->
+        <public name="notif_native_debug_title"/>
     </staging-public-group>
 </resources>
