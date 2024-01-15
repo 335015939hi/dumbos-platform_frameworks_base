@@ -19,6 +19,7 @@ import android.util.Slog;
 import com.android.internal.app.ContactScopes;
 import com.android.server.pm.Computer;
 import com.android.server.pm.GosPackageStatePmHooks;
+import com.android.server.pm.ext.PackageExt;
 import com.android.server.pm.ext.PackageHooks;
 import com.android.server.pm.permission.SpecialRuntimePermUtils;
 import com.android.server.pm.pkg.AndroidPackage;
@@ -156,6 +157,30 @@ public class PackageManagerHooks {
             return true;
         }
 
+        if (callingPkgSetting != null && isPlayStoreFrontend(callingPkgSetting.getPackageName())) {
+            AndroidPackage pkg = targetPkgSetting.getPkg();
+            if (pkg != null) {
+                switch (PackageExt.get(pkg).getPackageId()) {
+                    case PackageId.GMS_CORE:
+                    case PackageId.PLAY_STORE:
+                    case PackageId.EUICC_SUPPORT_PIXEL:
+                    case PackageId.G_EUICC_LPA:
+                    case PackageId.PIXEL_CAMERA_SERVICES:
+                    case PackageId.ANDROID_AUTO:
+                        return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static boolean isPlayStoreFrontend(String pkg) {
+        switch (pkg) {
+            case "com.aurora.store":
+            case "com.aurora.store.nightly":
+                return true;
+        }
         return false;
     }
 
