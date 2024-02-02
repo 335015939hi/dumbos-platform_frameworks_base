@@ -224,6 +224,12 @@ public class KeyguardServiceDelegate {
         final int userId = mKeyguardState.userId;
 
         AutoReboot.onKeyguardShowingStateChanged(mContext, showing, userId);
+
+        if (showing) {
+            System.gc();
+            System.runFinalization();
+            System.gc();
+        }
     }
 
     /**
