@@ -30,6 +30,10 @@
         <public name="setting_default_restrict_webview_dyn_code_loading"/>
         <!-- @hide -->
         <public name="setting_default_force_app_memtag"/>
+        <!-- @hide -->
+        <public name="config_usbPortSecuritySupported"/>
+        <!-- @hide -->
+        <public name="config_usb_port_security_applies_to_pogo_pins"/>        
     </staging-public-group>
 
     <staging-public-group type="drawable" first-id="0x0194f000">
@@ -123,5 +127,7 @@
         <public name="notif_memory_dcl_title"/>
         <!-- @hide -->
         <public name="notif_storage_dcl_title"/>
+        <!-- @hide -->
+        <public name="usb_port_security_error_title"/>
     </staging-public-group>
 </resources>
