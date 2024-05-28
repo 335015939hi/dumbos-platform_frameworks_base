@@ -25,6 +25,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.ext.settings.ExtSettings
 import android.os.RemoteException
 import android.util.Log
 import android.view.WindowManager
@@ -100,6 +101,10 @@ constructor(
      * @param source The source of the camera launch, to be passed to the camera app via [Intent]
      */
     fun launchCamera(source: Int) {
+        if (!ExtSettings.ALLOW_KEYGUARD_CAMERA.get(context) && !keyguardStateController.isUnlocked()) {
+            return
+        }
+
         val intent: Intent = getStartCameraIntent()
         intent.putExtra(CameraIntents.EXTRA_LAUNCH_SOURCE, source)
         val wouldLaunchResolverActivity =
