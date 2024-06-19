@@ -5545,6 +5545,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         if (DEBUG_WAKEUP) Slog.i(TAG, "Display" + displayId + " turned off...");
 
         if (displayId == DEFAULT_DISPLAY) {
+            SystemProperties.set(
+                    android.ext.settings.AltTouchscreenMode.STATE_OF_DEFAULT_DISPLAY_PROP, "off");
+
             final boolean acquireSleepToken = !isSwappingDisplay || mIsGoingToSleep;
             mRequestedOrSleepingDefaultDisplay = false;
             mDefaultDisplayPolicy.screenTurnedOff(acquireSleepToken);
@@ -5634,6 +5637,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     @Override
     public void screenTurnedOn(int displayId) {
         if (DEBUG_WAKEUP) Slog.i(TAG, "Display " + displayId + " turned on...");
+
+        if (displayId == DEFAULT_DISPLAY) {
+            SystemProperties.set(
+                    android.ext.settings.AltTouchscreenMode.STATE_OF_DEFAULT_DISPLAY_PROP, "on");
+        }
 
         reportScreenTurnedOnToWallpaper(displayId);
 
