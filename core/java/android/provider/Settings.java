@@ -14492,6 +14492,11 @@ public final class Settings {
         @Protected(read = KnownSystemPackage.SYSTEM_UI, readWrite = KnownSystemPackage.SETTINGS)
         public static final String BATTERY_CHARGE_LIMIT = "battery_charge_limit";
 
+        /** @hide */
+        @Protected(restrictReads = false, readWrite = {KnownSystemPackage.SETTINGS,
+                KnownSystemPackage.SETUP_WIZARD})
+        public static final String NETWORK_LOCATION = "network_location";
+
         // ExtSettings END
 
         // NOTE: If you add new settings here, be sure to add them to
