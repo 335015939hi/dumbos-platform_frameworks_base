@@ -11,6 +11,8 @@
         <public name="system_pkgs_allowed_storage_dyn_code_loading_by_default"/>
         <!-- @hide -->
         <public name="system_pkgs_allowed_webview_dyn_code_loading_by_default"/>
+        <!-- @hide -->
+        <public name="read_additional_security_state_known_signers"/>
     </staging-public-group>
 
     <staging-public-group type="bool" first-id="0x018bf000">
