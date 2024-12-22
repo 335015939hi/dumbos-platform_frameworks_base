@@ -141,14 +141,14 @@ class DeviceEntrySideFpsOverlayInteractorTest : SysuiTestCase() {
             // Secure lock device credential auth step
             kosmos.fakeSecureLockDeviceRepository.onSecureLockDeviceEnabled()
             whenever(keyguardUpdateMonitor.isFingerprintDetectionRunning).thenReturn(false)
-            whenever(keyguardUpdateMonitor.isUnlockingWithFingerprintAllowed).thenReturn(false)
+            whenever(keyguardUpdateMonitor.isUnlockingWithFingerprintAllowedSafe).thenReturn(false)
             runCurrent()
             assertThat(showIndicatorForDeviceEntry).isFalse()
 
             // Secure lock device biometric auth step
             kosmos.fakeSecureLockDeviceRepository.onSuccessfulPrimaryAuth()
             whenever(keyguardUpdateMonitor.isFingerprintDetectionRunning).thenReturn(true)
-            whenever(keyguardUpdateMonitor.isUnlockingWithFingerprintAllowed).thenReturn(true)
+            whenever(keyguardUpdateMonitor.isUnlockingWithFingerprintAllowedSafe).thenReturn(true)
             runCurrent()
             assertThat(showIndicatorForDeviceEntry).isTrue()
 
@@ -157,7 +157,7 @@ class DeviceEntrySideFpsOverlayInteractorTest : SysuiTestCase() {
             kosmos.fakeDeviceEntryRepository.deviceUnlockStatus.value =
                 DeviceUnlockStatus(true, DeviceUnlockSource.Fingerprint)
             whenever(keyguardUpdateMonitor.isFingerprintDetectionRunning).thenReturn(false)
-            whenever(keyguardUpdateMonitor.isUnlockingWithFingerprintAllowed).thenReturn(false)
+            whenever(keyguardUpdateMonitor.isUnlockingWithFingerprintAllowedSafe).thenReturn(false)
             runCurrent()
             assertThat(showIndicatorForDeviceEntry).isFalse()
         }
@@ -310,7 +310,7 @@ class DeviceEntrySideFpsOverlayInteractorTest : SysuiTestCase() {
 
         whenever(keyguardUpdateMonitor.isFingerprintDetectionRunning)
             .thenReturn(fpsDetectionRunning)
-        whenever(keyguardUpdateMonitor.isUnlockingWithFingerprintAllowed)
+        whenever(keyguardUpdateMonitor.isUnlockingWithFingerprintAllowedSafe)
             .thenReturn(isUnlockingWithFpAllowed)
         mContext.orCreateTestableResources.addOverride(
             R.bool.config_show_sidefps_hint_on_bouncer,

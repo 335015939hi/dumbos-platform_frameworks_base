@@ -85,7 +85,7 @@ constructor(
                 .map { biometricAuthRequested ->
                     biometricAuthRequested &&
                         keyguardUpdateMonitor.isFingerprintDetectionRunning &&
-                        keyguardUpdateMonitor.isUnlockingWithFingerprintAllowed
+                        keyguardUpdateMonitor.isUnlockingWithFingerprintAllowedSafe
                 }
                 .distinctUntilChanged()
                 .onEach { Log.d(TAG, "showIndicatorForSecureLockDeviceBiometricAuth updated: $it") }
@@ -107,7 +107,7 @@ constructor(
                 isBouncerActive() &&
                     isSideFpsIndicatorOnPrimaryBouncerEnabled &&
                     keyguardUpdateMonitor.isFingerprintDetectionRunning &&
-                    keyguardUpdateMonitor.isUnlockingWithFingerprintAllowed
+                    keyguardUpdateMonitor.isUnlockingWithFingerprintAllowedSafe
             }
             .onEach { Log.d(TAG, "showIndicatorForPrimaryBouncer updated: $it") }
 
