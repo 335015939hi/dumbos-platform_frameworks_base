@@ -1185,6 +1185,8 @@ public final class Zygote {
     @SuppressWarnings("unused")
     private static void callPostForkChildHooks(int runtimeFlags, boolean isSystemServer,
             boolean isZygote, String instructionSet) {
+        android.os.Binder.onZygotePostForkChild();
+        android.os.BinderProxy.onZygotePostForkChild();
         ZygoteHooks.postForkChild(runtimeFlags, isSystemServer, isZygote, instructionSet);
     }
 
