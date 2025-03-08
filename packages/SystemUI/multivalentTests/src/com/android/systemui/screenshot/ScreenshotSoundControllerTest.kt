@@ -24,6 +24,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import com.android.systemui.Flags.FLAG_SCREENSHOT_REMOVE_NONFORCED_SOUND
 import com.android.systemui.SysuiTestCase
+import com.android.systemui.shared.settings.data.repository.FakeSystemSettingsRepository
 import java.lang.IllegalStateException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
@@ -52,6 +53,7 @@ class ScreenshotSoundControllerTest : SysuiTestCase() {
     private val soundPolicy = mock<ScreenshotSoundPolicy>()
     private val bgDispatcher = UnconfinedTestDispatcher()
     private val scope = TestScope(bgDispatcher)
+    private val fakeSystemSettingsRepo = FakeSystemSettingsRepository()
 
     @Before
     fun setup() = runTest {
@@ -151,5 +153,5 @@ class ScreenshotSoundControllerTest : SysuiTestCase() {
     }
 
     private fun createController() =
-        ScreenshotSoundControllerImpl(soundProvider, soundPolicy, scope, bgDispatcher)
+        ScreenshotSoundControllerImpl(soundProvider, soundPolicy, fakeSystemSettingsRepo, scope, bgDispatcher)
 }
