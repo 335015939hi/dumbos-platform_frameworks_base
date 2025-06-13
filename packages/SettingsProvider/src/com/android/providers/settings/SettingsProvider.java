@@ -79,6 +79,7 @@ import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
+import android.ext.KnownSystemPackage;
 import android.ext.KnownSystemPackages;
 import android.hardware.camera2.utils.ArrayUtils;
 import android.media.AudioManager;
@@ -2597,6 +2598,23 @@ public class SettingsProvider extends ContentProvider {
             // ADB is used for testing
             Slog.d(LOG_TAG, "allowed shell to access protected setting " + protSetting.key());
             return;
+        }
+
+        if (Build.IS_DEBUGGABLE) {
+            String systemUiTests = "com.android.systemui.tests";
+            if (isRead && systemUiTests.equals(callingPackage)) {
+                ApplicationInfo ai = getCallingApplicationInfoOrThrow();
+                if (ai.isSignedWithPlatformKey() && (ai.flags & ApplicationInfo.FLAG_TEST_ONLY) != 0) {
+                    // SystemUI tests run SystemUI code, so it should be able to read
+                    // SystemUI-readable settings
+                    for (int id : protSetting.readableBy()) {
+                        if (id == KnownSystemPackage.SYSTEM_UI) {
+                            Slog.d(LOG_TAG, "allowed " + systemUiTests + " to read protected setting " + protSetting.key());
+                            return;
+                        }
+                    }
+                }
+            }
         }
 
         throw new SecurityException(callingPackage + " is not allowed to access protected setting " + protSetting.key());
