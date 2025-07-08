@@ -187,7 +187,6 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
 
     /**
      */
-    @Inject
     public PowerNotificationWarnings(
             Context context,
             ActivityStarter activityStarter,
