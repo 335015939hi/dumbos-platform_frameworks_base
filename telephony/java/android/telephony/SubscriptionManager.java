@@ -1267,6 +1267,16 @@ public class SubscriptionManager {
             SimInfo.COLUMN_SATELLITE_ENTITLEMENT_VOICE_SERVICE_POLICY;
 
     /**
+     * TelephonyProvider column name for extended SIM state. Interpreted as a base64-encoded proto
+     * of ExtSimState.
+     * By default, it's empty.
+     * <P>Type: TEXT </P>
+     *
+     * @hide
+     */
+    public static final String EXT_SIM_STATE = SimInfo.COLUMN_EXT_SIM_STATE;
+
+    /**
      * TelephonyProvider column name for the maximum downstream bitrate for streaming
      * applications, in kilobits per second (Kbps).
      * <p>

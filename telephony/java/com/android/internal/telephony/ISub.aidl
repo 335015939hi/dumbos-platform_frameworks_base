@@ -18,6 +18,7 @@ package com.android.internal.telephony;
 
 import android.telephony.SubscriptionInfo;
 import android.os.ParcelUuid;
+import android.os.PersistableBundle;
 import android.os.UserHandle;
 import android.telephony.SubscriptionPlan;
 import com.android.internal.telephony.ISetOpportunisticDataCallback;
