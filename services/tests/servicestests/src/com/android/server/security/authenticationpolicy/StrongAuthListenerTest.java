@@ -26,6 +26,8 @@ import android.os.Handler;
 import android.testing.AndroidTestingRunner;
 import android.testing.TestableLooper;
 
+import com.android.internal.widget.LockDomain;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -59,7 +61,7 @@ public class StrongAuthListenerTest {
 
     @Test
     public void testLockSettingsListener_onAuthenticationSucceeded_callsCallback() {
-        mStrongAuthListener.asLockSettingsStateListener().onAuthenticationSucceeded(USER_ID);
+        mStrongAuthListener.asLockSettingsStateListener().onAuthenticationSucceeded(USER_ID, LockDomain.Primary);
         TestableLooper.get(this).processAllMessages();
 
         verify(mOnStrongAuth).accept(USER_ID);

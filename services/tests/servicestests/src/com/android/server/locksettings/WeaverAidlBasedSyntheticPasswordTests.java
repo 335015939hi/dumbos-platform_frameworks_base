@@ -23,9 +23,11 @@ import androidx.test.runner.AndroidJUnit4;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 
+import junitparams.JUnitParamsRunner;
+
 @SmallTest
 @Presubmit
-@RunWith(AndroidJUnit4.class)
+@RunWith(JUnitParamsRunner.class)
 public class WeaverAidlBasedSyntheticPasswordTests extends WeaverBasedSyntheticPasswordTests {
 
     @Before

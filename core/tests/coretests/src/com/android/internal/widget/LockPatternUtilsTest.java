@@ -120,12 +120,12 @@ public class LockPatternUtilsTest {
         when(context.getContentResolver()).thenReturn(cr);
         Settings.Global.putInt(cr, Settings.Global.DEVICE_DEMO_MODE, deviceDemoMode);
 
-        when(mLockSettings.getCredentialType(DEMO_USER_ID)).thenReturn(
+        when(mLockSettings.getCredentialType(DEMO_USER_ID, LockDomain.Primary)).thenReturn(
                 isSecure ? LockPatternUtils.CREDENTIAL_TYPE_PASSWORD
                          : LockPatternUtils.CREDENTIAL_TYPE_NONE);
         when(mLockSettings.getLong("lockscreen.password_type", PASSWORD_QUALITY_UNSPECIFIED,
                 DEMO_USER_ID)).thenReturn((long) PASSWORD_QUALITY_MANAGED);
-        when(mLockSettings.getLockoutEndTime(USER_ID)).thenReturn(asParcel(LOCKOUT_END_TIME));
+        when(mLockSettings.getLockoutEndTime(USER_ID, LockDomain.Primary)).thenReturn(asParcel(LOCKOUT_END_TIME));
         when(mLockSettings.hasSecureLockScreen()).thenReturn(true);
         mLockPatternUtils = new LockPatternUtils(context, mLockSettings, mTimeSinceBootSupplier);
 
@@ -431,7 +431,7 @@ public class LockPatternUtilsTest {
         Duration lockoutEndTime = mLockPatternUtils.getLockoutEndTime(USER_ID);
 
         assertThat(lockoutEndTime).isEqualTo(LOCKOUT_END_TIME);
-        verify(mLockSettings).getLockoutEndTime(USER_ID);
+        verify(mLockSettings).getLockoutEndTime(USER_ID, LockDomain.Primary);
     }
 
     @Test
@@ -442,7 +442,7 @@ public class LockPatternUtilsTest {
             assertThat(lockoutEndTime).isEqualTo(LOCKOUT_END_TIME);
         }
 
-        verify(mLockSettings).getLockoutEndTime(USER_ID);
+        verify(mLockSettings).getLockoutEndTime(USER_ID, LockDomain.Primary);
     }
 
     @Test
@@ -455,12 +455,12 @@ public class LockPatternUtilsTest {
         reset(mTimeSinceBootSupplier, mLockSettings);
         when(mTimeSinceBootSupplier.get()).thenReturn(LOCKOUT_END_TIME.plusMillis(1));
         Duration secondLockoutEndTime = LOCKOUT_END_TIME.plusSeconds(1);
-        when(mLockSettings.getLockoutEndTime(USER_ID)).thenReturn(asParcel(secondLockoutEndTime));
+        when(mLockSettings.getLockoutEndTime(USER_ID, LockDomain.Primary)).thenReturn(asParcel(secondLockoutEndTime));
 
         Duration lockoutEndTime = mLockPatternUtils.getLockoutEndTime(USER_ID);
 
         assertThat(lockoutEndTime).isEqualTo(secondLockoutEndTime);
-        verify(mLockSettings).getLockoutEndTime(USER_ID);
+        verify(mLockSettings).getLockoutEndTime(USER_ID, LockDomain.Primary);
     }
 
     @Test
@@ -472,7 +472,7 @@ public class LockPatternUtilsTest {
             LockPatternUtils.invalidateLockoutEndTimeCache();
         }
 
-        verify(mLockSettings, times(5)).getLockoutEndTime(USER_ID);
+        verify(mLockSettings, times(5)).getLockoutEndTime(USER_ID, LockDomain.Primary);
     }
 
     private TestStrongAuthTracker createStrongAuthTracker() {

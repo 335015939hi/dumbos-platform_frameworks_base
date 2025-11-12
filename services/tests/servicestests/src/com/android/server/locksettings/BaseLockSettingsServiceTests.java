@@ -16,6 +16,12 @@
 
 package com.android.server.locksettings;
 
+import static android.os.UserManager.USER_TYPE_PROFILE_MANAGED;
+import static com.android.internal.widget.LockDomain.Primary;
+import static com.android.internal.widget.LockPatternUtils.AUTO_PIN_CONFIRM;
+import static com.android.internal.widget.LockPatternUtils.AUTO_PIN_CONFIRM_SECONDARY;
+import static com.android.internal.widget.LockPatternUtils.USER_FRP;
+import static org.junit.Assert.assertEquals;
 import static com.android.server.locksettings.UnifiedProfilePasswordCrypto.encryptProfilePasswordLegacy;
 
 import static org.junit.Assert.assertFalse;
@@ -31,6 +37,7 @@ import android.annotation.Nullable;
 import android.app.IActivityManager;
 import android.app.KeyguardManager;
 import android.app.NotificationManager;
+import android.app.PropertyInvalidatedCache;
 import android.app.admin.DevicePolicyManager;
 import android.app.admin.DevicePolicyManagerInternal;
 import android.app.admin.DeviceStateCache;
@@ -42,6 +49,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManagerInternal;
 import android.content.pm.UserInfo;
+import android.content.pm.UserProperties;
 import android.content.res.Resources;
 import android.hardware.authsecret.IAuthSecret;
 import android.hardware.face.FaceManager;
@@ -60,6 +68,7 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.util.test.FakeSettingsProvider;
 import com.android.internal.util.test.FakeSettingsProviderRule;
+import com.android.internal.widget.LockDomain;
 import com.android.internal.widget.LockPatternUtils;
 import com.android.internal.widget.LockscreenCredential;
 import com.android.server.LocalServices;
@@ -88,8 +97,10 @@ public abstract class BaseLockSettingsServiceTests {
     protected static final int TURNED_OFF_PROFILE_USER_ID = 17;
     protected static final int SECONDARY_USER_ID = 20;
     protected static final int TERTIARY_USER_ID = 21;
+    protected static final int DOES_NOT_EXIST_USER_ID = 30;
 
     protected UserInfo mPrimaryUserInfo;
+    protected UserInfo mManagedProfileInfo;
     protected UserInfo mSecondaryUserInfo;
     protected UserInfo mTertiaryUserInfo;
 
@@ -228,6 +239,13 @@ public abstract class BaseLockSettingsServiceTests {
                                 | UserInfo.FLAG_PRIMARY
                                 | UserInfo.FLAG_MAIN
                                 | UserInfo.FLAG_FULL);
+        mManagedProfileInfo =
+                new UserInfo(
+                        MANAGED_PROFILE_USER_ID,
+                        null,
+                        null,
+                        0,
+                        USER_TYPE_PROFILE_MANAGED);
         mSecondaryUserInfo =
                 new UserInfo(
                         SECONDARY_USER_ID,
@@ -240,6 +258,22 @@ public abstract class BaseLockSettingsServiceTests {
                         null,
                         null,
                         UserInfo.FLAG_INITIALIZED | UserInfo.FLAG_FULL);
+
+        when(mUserManager.getUserProperties(eq(UserHandle.of(PRIMARY_USER_ID)))).thenReturn(
+                new UserProperties.Builder().setCredentialShareableWithParent(false).build());
+        when(mUserManager.getUserProperties(eq(UserHandle.of(SECONDARY_USER_ID)))).thenReturn(
+                new UserProperties.Builder().setCredentialShareableWithParent(false).build());
+        when(mUserManager.getUserProperties(eq(UserHandle.of(TERTIARY_USER_ID)))).thenReturn(
+                new UserProperties.Builder().setCredentialShareableWithParent(false).build());
+        when(mUserManager.getUserProperties(eq(UserHandle.of(MANAGED_PROFILE_USER_ID)))).thenReturn(
+                new UserProperties.Builder().setCredentialShareableWithParent(true).build());
+        when(mUserManager.getUserProperties(eq(UserHandle.of(TURNED_OFF_PROFILE_USER_ID)))).thenReturn(
+                new UserProperties.Builder().setCredentialShareableWithParent(true).build());
+        when(mUserManager.getUserProperties(eq(UserHandle.of(DOES_NOT_EXIST_USER_ID)))).thenThrow(
+                IllegalArgumentException.class);
+        when(mUserManager.getUserProperties(eq(UserHandle.of(USER_FRP)))).thenThrow(
+                IllegalArgumentException.class);
+        when(mUserManager.getUserInfo(eq(MANAGED_PROFILE_USER_ID))).thenReturn(mManagedProfileInfo);
 
         when(mUserManager.getUserInfo(eq(PRIMARY_USER_ID))).thenReturn(mPrimaryUserInfo);
         when(mUserManagerInternal.getUserInfo(eq(PRIMARY_USER_ID))).thenReturn(mPrimaryUserInfo);
@@ -283,6 +317,8 @@ public abstract class BaseLockSettingsServiceTests {
         mLocalService = LocalServices.getService(LockSettingsInternal.class);
 
         when(mUserManagerInternal.isMainUserPermanentAdmin()).thenReturn(true);
+
+        PropertyInvalidatedCache.disableForTestMode();
     }
 
     private Resources createMockResources() {
@@ -322,6 +358,12 @@ public abstract class BaseLockSettingsServiceTests {
         mStorage.setTestFactoryResetProtectionState(secure);
         Settings.Secure.putIntForUser(mContext.getContentResolver(),
                 Settings.Secure.SECURE_FRP_MODE, secure ? 1 : 0, UserHandle.USER_SYSTEM);
+    }
+
+    protected void setAutoPinConfirm(int userId, LockDomain lockDomain, boolean enabled) {
+        String key = lockDomain == Primary ? AUTO_PIN_CONFIRM : AUTO_PIN_CONFIRM_SECONDARY;
+        mService.setBoolean(key, enabled, userId);
+        assertEquals(enabled, mService.getBoolean(key, false, userId));
     }
 
     private UserInfo installChildProfile(int profileId) {

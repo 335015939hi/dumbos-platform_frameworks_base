@@ -42,7 +42,7 @@ public class MockSyntheticPasswordManager extends SyntheticPasswordManager {
             UserManager userManager,
             PasswordSlotManager passwordSlotManager,
             KeyStore keyStore) {
-        super(context, storage, userManager, passwordSlotManager, keyStore);
+        super(context, storage, userManager, passwordSlotManager, keyStore, false);
     }
 
     @Override

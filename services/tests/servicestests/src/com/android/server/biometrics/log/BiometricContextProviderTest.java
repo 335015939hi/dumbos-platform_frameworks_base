@@ -44,6 +44,7 @@ import android.os.RemoteException;
 import android.platform.test.annotations.Presubmit;
 import android.platform.test.flag.junit.CheckFlagsRule;
 import android.platform.test.flag.junit.DeviceFlagsValueProvider;
+import android.security.KeyStoreAuthorization;
 import android.testing.AndroidTestingRunner;
 import android.testing.TestableContext;
 import android.testing.TestableLooper;
@@ -57,6 +58,8 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import com.android.internal.logging.InstanceId;
 import com.android.internal.statusbar.ISessionListener;
 import com.android.internal.statusbar.IStatusBarService;
+import com.android.internal.widget.LockPatternUtils;
+import com.android.server.biometrics.sensors.BiometricAuthTokenStore;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -96,6 +99,8 @@ public class BiometricContextProviderTest {
     @Mock
     private Consumer<OperationContext> mStartHalConsumer;
 
+    private KeyStoreAuthorization mKeyStoreAuthorization;
+
     private TestableLooper mLooper;
     private Handler mHandler;
     private final FingerprintAuthenticateOptions mAuthenticateOptions =
@@ -113,7 +118,8 @@ public class BiometricContextProviderTest {
                 new Display(DisplayManagerGlobal.getInstance(), Display.DEFAULT_DISPLAY,
                         new DisplayInfo(), DEFAULT_DISPLAY_ADJUSTMENTS));
         mProvider = new BiometricContextProvider(mContext, mWindowManager,
-                mStatusBarService, mHandler, null /* authSessionCoordinator */);
+                mStatusBarService, mHandler, null /* authSessionCoordinator */, new BiometricAuthTokenStore(mKeyStoreAuthorization),
+                new LockPatternUtils(mContext));
         ArgumentCaptor<IBiometricContextListener> captor =
                 ArgumentCaptor.forClass(IBiometricContextListener.class);
         verify(mStatusBarService).setBiometicContextListener(captor.capture());

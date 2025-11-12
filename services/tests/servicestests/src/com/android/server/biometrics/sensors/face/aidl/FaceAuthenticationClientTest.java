@@ -70,6 +70,7 @@ import androidx.test.filters.SmallTest;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.internal.R;
+import com.android.internal.widget.LockPatternUtils;
 import com.android.server.biometrics.log.BiometricContext;
 import com.android.server.biometrics.log.BiometricLogger;
 import com.android.server.biometrics.log.OperationContextExt;
@@ -141,6 +142,8 @@ public class FaceAuthenticationClientTest {
     private BiometricManager mBiometricManager;
     @Mock
     private LockoutTracker mLockoutTracker;
+    @Mock
+    private LockPatternUtils mLockPatternUtils;
     @Captor
     private ArgumentCaptor<OperationContextExt> mOperationContextCaptor;
     @Captor
@@ -177,6 +180,8 @@ public class FaceAuthenticationClientTest {
         when(mBiometricContext.updateContext(any(), anyBoolean())).thenAnswer(
                 i -> i.getArgument(0));
         when(mBiometricContext.getAuthSessionCoordinator()).thenReturn(mAuthSessionCoordinator);
+        when(mBiometricContext.getLockPatternUtils()).thenReturn(mLockPatternUtils);
+        when(mLockPatternUtils.isBiometricSecondFactorEnabled(anyInt())).thenReturn(false);
     }
 
     @Test
