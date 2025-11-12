@@ -28,6 +28,7 @@ import android.hardware.biometrics.events.AuthenticationSucceededInfo;
 import android.os.Handler;
 import android.util.Slog;
 
+import com.android.internal.widget.LockDomain;
 import com.android.server.locksettings.LockSettingsStateListener;
 
 import java.util.function.IntConsumer;
@@ -48,12 +49,18 @@ public class StrongAuthListener {
     private final LockSettingsStateListener mLockSettingsStateListener =
             new LockSettingsStateListener() {
                 @Override
-                public void onAuthenticationSucceeded(int userId) {
+                public void onAuthenticationSucceeded(int userId, LockDomain lockDomain) {
+                    if (lockDomain == LockDomain.Secondary) {
+                        return;
+                    }
                     mHandler.post(() -> onStrongAuth(userId));
                 }
 
                 @Override
-                public void onAuthenticationFailed(int userId) {
+                public void onAuthenticationFailed(int userId, LockDomain lockDomain) {
+                    if (lockDomain == LockDomain.Secondary) {
+                        return;
+                    }
                 }
             };
 
