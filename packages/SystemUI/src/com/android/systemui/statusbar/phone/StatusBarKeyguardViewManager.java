@@ -856,20 +856,36 @@ public class StatusBarKeyguardViewManager implements RemoteInputController.Callb
      */
     @Override
     public void showPrimaryBouncer(boolean scrimmed, String reason) {
+        // TODO: SIM PIN/PUK insertion code does not call through here. Despite that, it might be
+        //  possible for a user with second factor enabled to complete a fingerprint auth just
+        //  after inserting a SIM with a PIN/PUK, and then KSCC#showSecurityScreen would be called
+        //  with SIM PIN/PUK prior to preparing the fullscreen bouncer. Need to verify that this is
+        //  not done.
+
         hideAlternateBouncer(
                 /* updateScrim= */ false,
                 // When the scene framework is on, don't ever clear the pending dismiss action from
                 /* clearDismissAction= */ false);
-        if (mKeyguardStateController.isShowing() && !isBouncerShowing()) {
-            if (SceneContainerFlag.isEnabled()) {
-                mDeviceEntryInteractorLazy.get().attemptDeviceEntry(
+        if (mKeyguardStateController.isShowing()) {
+            if (!isBouncerShowing()) {
+                if (SceneContainerFlag.isEnabled()) {
+                    mDeviceEntryInteractorLazy.get().attemptDeviceEntry(
                         /* loggingReason */ "SBKVM.showPrimaryBouncer, reason: " + reason,
-                        /* callback */ null,
-                        /* skipShowingAlternateBouncer */ true
-
-                );
+                            /* callback */ null,
+                            /* skipShowingAlternateBouncer */ true);
+                } else {
+                    mPrimaryBouncerInteractor.show(scrimmed, reason);
+                }
             } else {
-                mPrimaryBouncerInteractor.show(scrimmed, reason);
+                if (SceneContainerFlag.isEnabled()) {
+                    throw new IllegalStateException(
+                            "Handle SceneContainerFlag in SBKVM#showPrimaryBouncer!");
+                }
+                // This will either dismiss the Keyguard (if KUM#getUserCanSkipBouncer is true) or
+                // display the appropriate SecurityMode in KSCC. These are the same outcomes that
+                // a caller can expect when calling #showPrimaryBouncer while the bouncer is not
+                // showing.
+                mPrimaryBouncerInteractor.notifyBouncerRequestedWhenAlreadyShowing();
             }
         }
         updateStates();

@@ -24,6 +24,7 @@ import android.provider.Settings
 import android.util.Log
 import com.android.app.tracing.ListenersTracing.forEachTraced
 import com.android.app.tracing.coroutines.launchTraced as launch
+import com.android.keyguard.KeyguardUpdateMonitorCallback.SecondFactorStatus
 import com.android.systemui.Dumpable
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
@@ -93,6 +94,7 @@ constructor(
     private data class PendingUnlock(
         val pendingUnlockType: BiometricSourceType,
         val isStrongBiometric: Boolean,
+        val secondFactorStatus: SecondFactorStatus
     )
 
     lateinit var unlockController: BiometricUnlockController
@@ -198,6 +200,7 @@ constructor(
     fun onBiometricAuthenticated(
         biometricSourceType: BiometricSourceType,
         isStrongBiometric: Boolean,
+        secondFactorStatus: SecondFactorStatus,
     ): Boolean {
         if (biometricSourceType == BiometricSourceType.FACE && bypassEnabled) {
             val can = canBypass()
@@ -212,7 +215,8 @@ constructor(
                         "qsExpanded=$qsExpanded",
                 )
                 if (isPulseExpanding || qsExpanded) {
-                    pendingUnlock = PendingUnlock(biometricSourceType, isStrongBiometric)
+                    pendingUnlock = PendingUnlock(biometricSourceType, isStrongBiometric,
+                        secondFactorStatus)
                 }
             }
             return can
@@ -226,11 +230,13 @@ constructor(
                 onBiometricAuthenticated(
                     pendingUnlock!!.pendingUnlockType,
                     pendingUnlock!!.isStrongBiometric,
+                    pendingUnlock!!.secondFactorStatus,
                 )
             ) {
                 unlockController.startWakeAndUnlock(
                     pendingUnlock!!.pendingUnlockType,
                     pendingUnlock!!.isStrongBiometric,
+                    pendingUnlock!!.secondFactorStatus,
                 )
                 pendingUnlock = null
             }

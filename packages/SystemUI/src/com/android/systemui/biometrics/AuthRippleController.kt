@@ -24,6 +24,7 @@ import android.hardware.biometrics.BiometricSourceType
 import android.util.DisplayMetrics
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.repeatOnLifecycle
+import com.android.internal.widget.LockPatternUtils
 import com.android.keyguard.KeyguardUpdateMonitor
 import com.android.keyguard.KeyguardUpdateMonitorCallback
 import com.android.keyguard.logging.KeyguardLogger
@@ -46,6 +47,7 @@ import com.android.systemui.statusbar.commandline.Command
 import com.android.systemui.statusbar.commandline.CommandRegistry
 import com.android.systemui.statusbar.policy.ConfigurationController
 import com.android.systemui.statusbar.policy.KeyguardStateController
+import com.android.systemui.user.domain.interactor.SelectedUserInteractor
 import com.android.systemui.util.ViewController
 import java.io.PrintWriter
 import javax.inject.Inject
@@ -76,6 +78,7 @@ constructor(
     private val logger: KeyguardLogger,
     private val authRippleInteractor: AuthRippleInteractor,
     private val facePropertyRepository: FacePropertyRepository,
+    private val selectedUserInteractor: SelectedUserInteractor,
     rippleView: AuthRippleView?,
 ) : ViewController<AuthRippleView>(rippleView), CoreStartable {
 
@@ -130,8 +133,15 @@ constructor(
 
     private fun showUnlockRippleInternal(biometricSourceType: BiometricSourceType) {
         val keyguardNotShowing = !keyguardStateController.isShowing
+        // TODO: When adding this I noticed there is a bug that prevents unlock ripple from
+        //  displaying when a user adds and then deletes a second factor. It occurs even when
+        //  setting a second factor and then deleting it before going to the lockscreen. It occurs
+        //  when changing primary credential also, so we probably didn't introduce it.
+        val secondFactorEnabled = LockPatternUtils(sysuiContext).isBiometricSecondFactorEnabled(
+            selectedUserInteractor.getSelectedUserId())
         val unlockNotAllowed =
-            !keyguardUpdateMonitor.isUnlockingWithBiometricAllowed(biometricSourceType)
+            !keyguardUpdateMonitor.isUnlockingWithBiometricAllowedSafe(biometricSourceType) ||
+                secondFactorEnabled
         if (keyguardNotShowing || unlockNotAllowed) {
             logger.notShowingUnlockRipple(keyguardNotShowing, unlockNotAllowed)
             return
@@ -207,6 +217,7 @@ constructor(
                 userId: Int,
                 biometricSourceType: BiometricSourceType,
                 isStrongBiometric: Boolean,
+                secondFactorStatus: SecondFactorStatus,
             ) {
                 if (biometricSourceType == BiometricSourceType.FINGERPRINT) {
                     if (SceneContainerFlag.isEnabled) {
@@ -214,7 +225,13 @@ constructor(
                             AuthRippleInteractor.AuthRippleEvent.FadeOut
                         )
                     } else {
-                        mView.fadeDwellRipple()
+                        if (secondFactorStatus == SecondFactorStatus.Enabled) {
+                            // Do same as in #onBiometricAuthFailed as want to keep second factor UI
+                            // in sync with going from 3rd UDFPS failure to bouncer.
+                            mView.retractDwellRipple()
+                        } else {
+                            mView.fadeDwellRipple()
+                        }
                     }
                 }
             }
