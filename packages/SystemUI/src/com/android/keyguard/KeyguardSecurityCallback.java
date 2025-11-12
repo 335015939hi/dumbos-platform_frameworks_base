@@ -15,6 +15,7 @@
  */
 package com.android.keyguard;
 
+import com.android.internal.widget.LockDomain;
 import com.android.keyguard.KeyguardSecurityModel.SecurityMode;
 
 import java.time.Duration;
@@ -63,13 +64,14 @@ public interface KeyguardSecurityCallback {
     /**
      * Call to report an unlock attempt.
      * @param userId id of the user whose unlock attempt is recorded.
+     * @param lockDomain whether reporting primary or biometric second factor unlock.
      * @param success set to 'true' if user correctly entered security credentials.
      * @param timeout timeout to wait before reattempting an unlock. Only nonzero
      *     if 'success' is false
      * @param isDuplicate 'true' if user entered the password already, implying 'success' is 'false'
      */
     default void reportUnlockAttempt(
-            int userId, boolean success, Duration timeout, boolean isDuplicate) {}
+            int userId, LockDomain lockDomain, boolean success, Duration timeout, boolean isDuplicate) {}
 
     /**
      * Resets the keyguard view.
@@ -94,7 +96,7 @@ public interface KeyguardSecurityCallback {
      * Invoked when the auth input is disabled for specified number of seconds.
      * @param seconds Number of seconds for which the auth input is disabled.
      */
-    default void onAttemptLockoutStart(long seconds) {}
+    default void onAttemptLockoutStart(SecurityMode securityMode, long seconds) {}
 
     /**
      * Dismisses keyguard and go to unlocked state.

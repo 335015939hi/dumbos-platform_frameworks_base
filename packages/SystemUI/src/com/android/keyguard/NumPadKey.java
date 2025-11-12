@@ -58,6 +58,7 @@ public class NumPadKey extends ViewGroup implements NumPadAnimationListener, Num
     private int mTextViewResId;
     private PasswordTextView mTextView;
     private boolean mAnimationsEnabled = true;
+    private View mRoot;
 
     @Nullable
     private NumPadAnimator mAnimator;
@@ -69,9 +70,9 @@ public class NumPadKey extends ViewGroup implements NumPadAnimationListener, Num
         @Override
         public void onClick(View thisView) {
             if (mTextView == null && mTextViewResId > 0) {
-                final View v = NumPadKey.this.getRootView().findViewById(mTextViewResId);
-                if (v != null && v instanceof PasswordTextView) {
-                    mTextView = (PasswordTextView) v;
+                final View v = mRoot.findViewById(mTextViewResId);
+                if (v instanceof PasswordTextView tv) {
+                    mTextView = tv;
                 }
             }
             if (mTextView != null && mTextView.isEnabled()) {
@@ -135,6 +136,10 @@ public class NumPadKey extends ViewGroup implements NumPadAnimationListener, Num
             mDigitText.setTypeface(
                     Typeface.create(FontStyles.GSF_LABEL_SMALL_EMPHASIZED, Typeface.NORMAL));
         }
+    }
+
+    public void setRoot(View root) {
+        mRoot = root;
     }
 
     @Override

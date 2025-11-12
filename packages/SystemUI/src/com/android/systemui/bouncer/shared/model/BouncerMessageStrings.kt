@@ -22,6 +22,7 @@ import android.security.Flags.lockscreenTimeoutShortlink
 import android.security.Flags.secureLockDevice
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Biometric
+import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.BiometricSecondFactorPin
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Password
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Pattern
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Pin
@@ -90,6 +91,7 @@ object BouncerMessageStrings {
             Pattern -> patternDefaultMessage(fpAuthIsAllowed)
             Password -> passwordDefaultMessage(fpAuthIsAllowed)
             Pin -> pinDefaultMessage(fpAuthIsAllowed)
+            BiometricSecondFactorPin -> R.string.keyguard_enter_biometric_second_factor_pin
             else -> 0
         }
 
@@ -113,7 +115,16 @@ object BouncerMessageStrings {
             secureLockDevice() && secureLockDeviceEnabled ->
                 Pair(R.string.kg_prompt_title_after_secure_lock_device, wrongInputMessage)
             wrongInputMessage != 0 ->
-                Pair(wrongInputMessage, incorrectSecurityInputSecondaryMessage(fpAuthIsAllowed))
+                Pair(
+                    wrongInputMessage,
+                    // The second factor PIN bouncer is only reached after a biometric has already
+                    // succeeded, so fingerprint is never an alternative to it; don't suggest it.
+                    if (securityMode == BiometricSecondFactorPin) {
+                        0
+                    } else {
+                        incorrectSecurityInputSecondaryMessage(fpAuthIsAllowed)
+                    },
+                )
             else -> EmptyMessage
         }
     }
@@ -123,6 +134,7 @@ object BouncerMessageStrings {
             Pattern -> R.string.kg_wrong_pattern_try_again
             Password -> R.string.kg_wrong_password_try_again
             Pin -> R.string.kg_wrong_pin_try_again
+            BiometricSecondFactorPin -> R.string.kg_wrong_biometric_second_factor_pin_try_again
             else -> 0
         }
 
@@ -131,6 +143,7 @@ object BouncerMessageStrings {
             Pattern -> R.string.kg_primary_auth_duplicate_guess_pattern
             Password -> R.string.kg_primary_auth_duplicate_guess_password
             Pin -> R.string.kg_primary_auth_duplicate_guess_pin
+            BiometricSecondFactorPin -> R.string.kg_wrong_biometric_second_factor_pin_try_again
             else -> 0
         }
 
@@ -414,7 +427,9 @@ object BouncerMessageStrings {
                     } else {
                         R.string.kg_primary_auth_locked_out_pin
                     }
-                else -> 0
+                BiometricSecondFactorPin ->
+                    R.string.kg_primary_auth_locked_out_biometric_second_factor_pin
+            else -> 0
             }
         val (primaryId, count) = determineTimeoutStringAndCount(timeoutSeconds)
         return LockoutMessageModel(primaryId, count, secondaryId)

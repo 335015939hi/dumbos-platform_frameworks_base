@@ -17,6 +17,7 @@
 package com.android.systemui.util.wrapper
 
 import android.os.AsyncTask
+import com.android.internal.widget.LockDomain
 import com.android.internal.widget.LockPatternChecker
 import com.android.internal.widget.LockPatternChecker.OnCheckCallback
 import com.android.internal.widget.LockPatternChecker.OnVerifyCallback
@@ -39,11 +40,12 @@ class LockPatternCheckerWrapper @Inject constructor() {
 
     fun checkCredential(
         utils: LockPatternUtils,
+        lockDomain: LockDomain,
         credential: LockscreenCredential,
         userId: Int,
         callback: OnCheckCallback,
     ): AsyncTask<*, *, *> {
-        return LockPatternChecker.checkCredential(utils, credential, userId, callback)
+        return LockPatternChecker.checkCredential(utils, lockDomain, credential, userId, callback)
     }
 
     /**

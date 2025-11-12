@@ -33,6 +33,7 @@ import com.android.keyguard.KeyguardSecurityModel
 import com.android.systemui.authentication.data.repository.AuthenticationRepository.Companion.WARM_UP_THROTTLE_DURATION
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Biometric
+import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.BiometricSecondFactorPin
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.None
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Password
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Pattern
@@ -533,14 +534,17 @@ constructor(
      */
     private fun getAuthenticationMethodBlocking(@UserIdInt userId: Int): AuthenticationMethodModel {
         return when (getSecurityMode.apply(userId)) {
-            KeyguardSecurityModel.SecurityMode.PIN -> Pin
-            KeyguardSecurityModel.SecurityMode.SimPin,
-            KeyguardSecurityModel.SecurityMode.SimPuk -> Sim
-            KeyguardSecurityModel.SecurityMode.Password -> Password
-            KeyguardSecurityModel.SecurityMode.Pattern -> Pattern
-            KeyguardSecurityModel.SecurityMode.None -> None
-            KeyguardSecurityModel.SecurityMode.SecureLockDeviceBiometricAuth -> Biometric
-            KeyguardSecurityModel.SecurityMode.Invalid -> error("Invalid security mode!")
+            KeyguardSecurityModel.SecurityMode.BiometricSecondFactorPin ->
+                    BiometricSecondFactorPin
+                KeyguardSecurityModel.SecurityMode.PIN -> Pin
+                KeyguardSecurityModel.SecurityMode.SimPin,
+                KeyguardSecurityModel.SecurityMode.SimPuk -> Sim
+                KeyguardSecurityModel.SecurityMode.Password -> Password
+                KeyguardSecurityModel.SecurityMode.Pattern -> Pattern
+                KeyguardSecurityModel.SecurityMode.None -> None
+                KeyguardSecurityModel.SecurityMode.SecureLockDeviceBiometricAuth -> Biometric
+                KeyguardSecurityModel.SecurityMode.Invalid -> error("Invalid security mode!")
+
         }
     }
 

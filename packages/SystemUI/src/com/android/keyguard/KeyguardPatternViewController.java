@@ -20,6 +20,7 @@ import static android.security.Flags.lockscreenIndicateDuplicateGuesses;
 
 import static com.android.internal.util.LatencyTracker.ACTION_CHECK_CREDENTIAL;
 import static com.android.internal.util.LatencyTracker.ACTION_CHECK_CREDENTIAL_UNLOCKED;
+import static com.android.internal.widget.LockDomain.Primary;
 import static com.android.systemui.flags.Flags.LOCKSCREEN_ENABLE_LANDSCAPE;
 
 import android.content.res.ColorStateList;
@@ -197,7 +198,7 @@ public class KeyguardPatternViewController
                 mBouncerHapticPlayer.playAuthenticationFeedback(
                         /* authenticationSucceeded= */true
                 );
-                getKeyguardSecurityCallback().reportUnlockAttempt(userId, true,
+                getKeyguardSecurityCallback().reportUnlockAttempt(userId, Primary, true,
                         Duration.ZERO, isDuplicate);
                 if (dismissKeyguard) {
                     mLockPatternView.setDisplayMode(LockPatternView.DisplayMode.Correct);
@@ -219,7 +220,7 @@ public class KeyguardPatternViewController
                 mLockPatternView.setDisplayMode(LockPatternView.DisplayMode.Wrong);
                 if (isValidPattern) {
                     getKeyguardSecurityCallback()
-                            .reportUnlockAttempt(userId, false, timeout, isDuplicate);
+                            .reportUnlockAttempt(userId, Primary, false, timeout, isDuplicate);
                     if (timeout.isPositive()) {
                         Duration lockoutEndTime = mLockPatternUtils.getLockoutEndTime(userId);
                         handleAttemptLockout(lockoutEndTime);
@@ -434,7 +435,7 @@ public class KeyguardPatternViewController
         final long elapsedRealtime = SystemClock.elapsedRealtime();
         final long secondsInFuture = (long) Math.ceil(
                 (lockoutEndTime.toMillis() - elapsedRealtime) / 1000.0);
-        getKeyguardSecurityCallback().onAttemptLockoutStart(secondsInFuture);
+        getKeyguardSecurityCallback().onAttemptLockoutStart(getSecurityMode(), secondsInFuture);
         mCountdownTimer = new CountDownTimer(secondsInFuture * 1000, 1000) {
 
             @Override

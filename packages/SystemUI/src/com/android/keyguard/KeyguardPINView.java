@@ -22,6 +22,8 @@ import static android.security.Flags.lockscreenTimeoutDeactivatePinPad;
 
 import static com.android.internal.jank.InteractionJankMonitor.CUJ_LOCKSCREEN_PIN_APPEAR;
 import static com.android.internal.jank.InteractionJankMonitor.CUJ_LOCKSCREEN_PIN_DISAPPEAR;
+import static com.android.internal.widget.LockDomain.Primary;
+import static com.android.internal.widget.LockDomain.Secondary;
 import static com.android.systemui.statusbar.policy.DevicePostureController.DEVICE_POSTURE_CLOSED;
 import static com.android.systemui.statusbar.policy.DevicePostureController.DEVICE_POSTURE_HALF_OPENED;
 import static com.android.systemui.statusbar.policy.DevicePostureController.DEVICE_POSTURE_UNKNOWN;
@@ -41,6 +43,7 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.constraintlayout.widget.ConstraintSet;
 
 import com.android.app.animation.Interpolators;
+import com.android.internal.widget.LockDomain;
 import com.android.settingslib.animation.DisappearAnimationUtils;
 import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.DevicePostureController.DevicePostureInt;
@@ -272,6 +275,10 @@ public class KeyguardPINView extends KeyguardPinBasedInputView {
 
     @Override
     public int getWrongPasswordStringId(boolean isDuplicate) {
+        if (mLockDomain == Secondary) {
+            // TODO add equivalent of kg_primary_auth_duplicate_guess_pin
+            return R.string.kg_wrong_biometric_second_factor_pin;
+        }
         return isDuplicate
                 ? R.string.kg_primary_auth_duplicate_guess_pin
                 : R.string.kg_wrong_pin;
@@ -284,6 +291,9 @@ public class KeyguardPINView extends KeyguardPinBasedInputView {
         if (mAppearAnimator.isRunning()) {
             mAppearAnimator.cancel();
         }
+        // TODO: Lag can sometimes be observed here. We get a large number of log messages such as:
+        //  FrameTracker: Missing HWUI jank callback for vsyncId: 75461, CUJ=J<LOCKSCREEN_PIN_APPEAR>
+        //  This can be reproduced without 2FA by going from fingerprint failures to bouncer.
         mAppearAnimator.setDuration(ANIMATION_DURATION);
         mAppearAnimator.addUpdateListener(animation -> animate(animation.getAnimatedFraction()));
         mAppearAnimator.addListener(getAnimationListener(CUJ_LOCKSCREEN_PIN_APPEAR));
@@ -350,5 +360,23 @@ public class KeyguardPINView extends KeyguardPinBasedInputView {
                 }
             }
         }
+    }
+
+    private LockDomain mLockDomain = Primary;
+
+    public void setLockDomain(LockDomain lockDomain) {
+        mLockDomain = lockDomain;
+    }
+
+    @Override
+    protected int getPromptReasonStringRes(int reason) {
+        if (mLockDomain == Secondary) {
+            // Without this can end up displaying a strong auth prompt even when SecurityMode is
+            // BiometricSecondFactorPin. See allowedNonStrongAfterIdleTimeout in
+            // KeyguardViewMediator#getBouncerPromptReason. This may be an upstream bug, would need
+            // to look further.
+            return 0;
+        }
+        return super.getPromptReasonStringRes(reason);
     }
 }
