@@ -316,6 +316,9 @@ class FakeAuthenticationRepository(private val currentTimeMs: () -> Long) :
                 is AuthenticationMethodModel.None -> SecurityMode.None
                 is AuthenticationMethodModel.Sim -> SecurityMode.SimPin
                 is AuthenticationMethodModel.Biometric -> SecurityMode.SecureLockDeviceBiometricAuth
+                is AuthenticationMethodModel.BiometricSecondFactorPin ->
+                    SecurityMode.BiometricSecondFactorPin
+                else -> SecurityMode.Invalid
             }
         }
 

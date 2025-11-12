@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import static com.android.internal.widget.LockDomain.Primary;
+import static com.android.internal.widget.LockDomain.Secondary;
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -80,7 +82,6 @@ public class KeyguardAbsKeyInputViewControllerTest extends SysuiTestCase {
     private BouncerKeyguardMessageArea mKeyguardMessageArea;
     @Mock
     private KeyguardUpdateMonitor mKeyguardUpdateMonitor;
-    @Mock
     private SecurityMode mSecurityMode;
     @Mock
     private LockPatternUtils mLockPatternUtils;
@@ -114,6 +115,7 @@ public class KeyguardAbsKeyInputViewControllerTest extends SysuiTestCase {
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
+        mSecurityMode = SecurityMode.PIN;
         when(mKeyguardMessageAreaControllerFactory.create(any(KeyguardMessageArea.class)))
                 .thenReturn(mKeyguardMessageAreaController);
         when(mAbsKeyInputView.getPasswordTextViewId()).thenReturn(1);
@@ -209,10 +211,23 @@ public class KeyguardAbsKeyInputViewControllerTest extends SysuiTestCase {
     }
 
     @Test
-    public void testOnViewAttached() {
+    public void testOnViewAttached_Primary_GetsLockoutAttemptDeadline() {
+        mSecurityMode = SecurityMode.PIN;
+        mKeyguardAbsKeyInputViewController = createTestObject();
         reset(mLockPatternUtils);
         mKeyguardAbsKeyInputViewController.onViewAttached();
-        verify(mLockPatternUtils).getLockoutEndTime(anyInt());
+        mKeyguardAbsKeyInputViewController.onResume(0);
+        verify(mLockPatternUtils).getLockoutEndTime(anyInt(), eq(Primary));
+    }
+
+    @Test
+    public void testOnViewAttached_Secondary_GetsLockoutAttemptDeadline() {
+        mSecurityMode = SecurityMode.BiometricSecondFactorPin;
+        mKeyguardAbsKeyInputViewController = createTestObject();
+        reset(mLockPatternUtils);
+        mKeyguardAbsKeyInputViewController.onViewAttached();
+        mKeyguardAbsKeyInputViewController.onResume(0);
+        verify(mLockPatternUtils).getLockoutEndTime(anyInt(), eq(Secondary));
     }
 
     @Test

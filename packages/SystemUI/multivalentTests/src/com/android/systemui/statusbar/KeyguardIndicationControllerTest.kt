@@ -506,7 +506,7 @@ class KeyguardIndicationControllerTest : KeyguardIndicationControllerBaseTest() 
 
         // GIVEN unlocking with fingerprint is possible but not allowed
         setupFingerprintUnlockPossible(true)
-        whenever(mKeyguardUpdateMonitor.isUnlockingWithFingerprintAllowed).thenReturn(false)
+        whenever(mKeyguardUpdateMonitor.isUnlockingWithFingerprintAllowedSafe()).thenReturn(false)
 
         val message = "A message"
         mController.setVisible(true)
@@ -2073,7 +2073,7 @@ class KeyguardIndicationControllerTest : KeyguardIndicationControllerBaseTest() 
 
     private fun fingerprintUnlockIsPossibleAndAllowed() {
         setupFingerprintUnlockPossible(true)
-        whenever(mKeyguardUpdateMonitor.isUnlockingWithFingerprintAllowed).thenReturn(true)
+        whenever(mKeyguardUpdateMonitor.isUnlockingWithFingerprintAllowedSafe()).thenReturn(true)
     }
 
     private fun setupFingerprintUnlockPossible(possible: Boolean) {
