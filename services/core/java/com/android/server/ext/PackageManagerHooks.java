@@ -43,6 +43,8 @@ public class PackageManagerHooks {
                     // one of the previous OS versions enabled EuiccSupportPixel in all users
                     return PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
                 }
+            case PackageId.SYSTEM_KEYBOARD:
+                return PackageManager.COMPONENT_ENABLED_STATE_DEFAULT;
             default:
                 return null;
         }
