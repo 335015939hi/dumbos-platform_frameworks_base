@@ -66,6 +66,8 @@ import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.internal.util.EmergencyAffordanceManager;
 import com.android.internal.widget.LockPatternUtils;
+import com.android.server.LocalServices;
+import com.android.server.pm.UserManagerInternal;
 import com.android.server.policy.WindowManagerPolicy.WindowManagerFuncs;
 
 import java.util.ArrayList;
@@ -305,6 +307,9 @@ class LegacyGlobalActions implements DialogInterface.OnDismissListener, DialogIn
                 mItems.add(getAssistAction());
             } else if (GLOBAL_ACTION_KEY_RESTART.equals(actionKey)) {
                 mItems.add(new RestartAction(mContext, mWindowManagerFuncs));
+                if (!LocalServices.getService(UserManagerInternal.class).isUserUnlocked(UserHandle.USER_SYSTEM)) {
+                    mItems.add(new RestartSafeModeAction(mWindowManagerFuncs));
+                }
             } else {
                 Log.e(TAG, "Invalid global action key " + actionKey);
             }
