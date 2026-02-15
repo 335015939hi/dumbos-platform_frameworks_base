@@ -83,7 +83,10 @@ import com.android.systemui.keyevent.data.repository.KeyEventRepositoryModule;
 import com.android.systemui.keyguard.data.quickaffordance.KeyguardDataQuickAffordanceModule;
 import com.android.systemui.keyguard.shared.quickaffordance.KeyguardQuickAffordancesMetricsLogger;
 import com.android.systemui.keyguard.shared.quickaffordance.KeyguardQuickAffordancesMetricsLoggerImpl;
+import com.android.systemui.keyguard.smartspace.LockscreenSmartspaceDatePlugin;
+import com.android.systemui.keyguard.smartspace.LockscreenSmartspaceWeatherPlugin;
 import com.android.systemui.keyguard.ui.composable.LockscreenContent;
+import com.android.systemui.keyguard.smartspace.LockscreenSmartspaceGeneralPlugin;
 import com.android.systemui.log.dagger.LogModule;
 import com.android.systemui.log.dagger.MonitorLog;
 import com.android.systemui.log.table.TableLogBuffer;
@@ -128,6 +131,7 @@ import com.android.systemui.shade.transition.LargeScreenShadeInterpolator;
 import com.android.systemui.shade.transition.LargeScreenShadeInterpolatorImpl;
 import com.android.systemui.shared.condition.Monitor;
 import com.android.systemui.smartspace.dagger.SmartspaceModule;
+import com.android.systemui.smartspace.service.SystemUISmartspaceService;
 import com.android.systemui.startable.Dependencies;
 import com.android.systemui.statusbar.CommandQueue;
 import com.android.systemui.statusbar.NotificationLockscreenUserManager;
@@ -379,8 +383,17 @@ public abstract class SystemUIModule {
     @BindsOptionalOf
     abstract HeadsUpManager optionalHeadsUpManager();
 
+    @Binds
+    @IntoMap
+    @ClassKey(SystemUISmartspaceService.class)
+    abstract Service bindsSystemUISmartspaceService(SystemUISmartspaceService service);
+
     @BindsOptionalOf
     abstract BcSmartspaceDataPlugin optionalBcSmartspaceDataPlugin();
+
+    @Binds
+    abstract BcSmartspaceDataPlugin bindBcSmartspaceDataPlugin(
+            LockscreenSmartspaceGeneralPlugin impl);
 
     @BindsOptionalOf
     abstract BcSmartspaceConfigPlugin optionalBcSmartspaceConfigPlugin();
@@ -389,9 +402,18 @@ public abstract class SystemUIModule {
     @Named(SmartspaceModule.DATE_SMARTSPACE_DATA_PLUGIN)
     abstract BcSmartspaceDataPlugin optionalDateSmartspaceConfigPlugin();
 
+    @Binds
+    @Named(SmartspaceModule.DATE_SMARTSPACE_DATA_PLUGIN)
+    abstract BcSmartspaceDataPlugin bindBcSmartspaceDatePlugin(LockscreenSmartspaceDatePlugin impl);
+
     @BindsOptionalOf
     @Named(SmartspaceModule.WEATHER_SMARTSPACE_DATA_PLUGIN)
     abstract BcSmartspaceDataPlugin optionalWeatherSmartspaceConfigPlugin();
+
+    @Binds
+    @Named(SmartspaceModule.WEATHER_SMARTSPACE_DATA_PLUGIN)
+    abstract BcSmartspaceDataPlugin bindBcSmartspaceWeatherPlugin(
+            LockscreenSmartspaceWeatherPlugin impl);
 
     @BindsOptionalOf
     abstract Recents optionalRecents();

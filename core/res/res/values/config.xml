@@ -5441,7 +5441,7 @@
      If no service with the specified name exists on the device, smartspace will be disabled.
      Example: "com.android.intelligence/.SmartspaceService"
 -->
-    <string name="config_defaultSmartspaceService" translatable="false"></string>
+    <string name="config_defaultSmartspaceService" translatable="false">com.android.systemui/.smartspace.service.SystemUISmartspaceService</string>
 
     <!-- The package name for the system's speech recognition service.
          This service must be trusted, as it can be activated without explicit consent of the user.

@@ -509,6 +509,10 @@
                  android:permission="com.android.systemui.permission.SELF"
                  android:exported="false" />
 
+        <service android:name=".smartspace.service.SystemUISmartspaceService"
+            android:permission="com.android.systemui.permission.MANAGE_SMARTSPACE"
+            android:exported="false" />
+
         <activity android:name=".screenshot.appclips.AppClipsTrampolineActivity"
             android:theme="@style/AppClipsTrampolineActivity"
             android:label="@string/screenshot_preview_description"

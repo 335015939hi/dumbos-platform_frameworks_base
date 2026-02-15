@@ -31,6 +31,8 @@ import com.android.systemui.keyguard.KeyguardUnlockAnimationController
 import com.android.systemui.keyguard.domain.interactor.KeyguardBlueprintInteractor
 import com.android.systemui.keyguard.domain.interactor.KeyguardSmartspaceInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardSection
+import com.android.systemui.keyguard.smartspace.LockscreenSmartspaceGeneralView
+import com.android.systemui.keyguard.smartspace.LockscreenSmartspaceGeneralViewController
 import com.android.systemui.keyguard.ui.binder.KeyguardSmartspaceViewBinder
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardClockViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardSmartspaceViewModel
@@ -39,6 +41,7 @@ import com.android.systemui.res.R as R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shared.R as sharedR
 import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController
+import com.android.systemui.statusbar.policy.ConfigurationController
 import dagger.Lazy
 import javax.inject.Inject
 import kotlinx.coroutines.DisposableHandle
@@ -52,6 +55,7 @@ constructor(
     val keyguardSmartspaceViewModel: KeyguardSmartspaceViewModel,
     private val keyguardSmartspaceInteractor: KeyguardSmartspaceInteractor,
     val smartspaceController: LockscreenSmartspaceController,
+    val configurationController: ConfigurationController,
     val keyguardUnlockAnimationController: KeyguardUnlockAnimationController,
     private val blueprintInteractor: Lazy<KeyguardBlueprintInteractor>,
 ) : KeyguardSection() {
@@ -116,6 +120,15 @@ constructor(
 
     override fun bindData(constraintLayout: ConstraintLayout) {
         if (!keyguardSmartspaceViewModel.isSmartspaceEnabled) return
+
+        val controller =
+            LockscreenSmartspaceGeneralViewController(
+                smartspaceView as LockscreenSmartspaceGeneralView,
+                smartspaceController,
+                configurationController
+            )
+        controller.init()
+
         disposableHandle?.dispose()
         disposableHandle =
             KeyguardSmartspaceViewBinder.bind(

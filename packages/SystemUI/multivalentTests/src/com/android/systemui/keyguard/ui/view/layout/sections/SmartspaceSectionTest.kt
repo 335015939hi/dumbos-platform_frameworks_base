@@ -36,6 +36,7 @@ import com.android.systemui.res.R
 import com.android.systemui.runOnMainThreadAndWaitForIdleSync
 import com.android.systemui.shared.R as sharedR
 import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController
+import com.android.systemui.statusbar.policy.ConfigurationController
 import com.google.common.truth.Truth.assertThat
 import dagger.Lazy
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,6 +60,7 @@ class SmartspaceSectionTest : SysuiTestCase() {
     @Mock private lateinit var keyguardClockViewModel: KeyguardClockViewModel
     @Mock private lateinit var keyguardSmartspaceViewModel: KeyguardSmartspaceViewModel
     @Mock private lateinit var lockscreenSmartspaceController: LockscreenSmartspaceController
+    @Mock private lateinit var configurationController: ConfigurationController
     @Mock private lateinit var keyguardUnlockAnimationController: KeyguardUnlockAnimationController
     @Mock private lateinit var keyguardSmartspaceInteractor: KeyguardSmartspaceInteractor
     @Mock private lateinit var blueprintInteractor: Lazy<KeyguardBlueprintInteractor>
@@ -91,6 +93,7 @@ class SmartspaceSectionTest : SysuiTestCase() {
                 keyguardSmartspaceViewModel,
                 keyguardSmartspaceInteractor,
                 lockscreenSmartspaceController,
+                configurationController,
                 keyguardUnlockAnimationController,
                 blueprintInteractor,
             )

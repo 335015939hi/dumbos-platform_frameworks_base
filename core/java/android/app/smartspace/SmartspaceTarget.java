@@ -184,6 +184,10 @@ public final class SmartspaceTarget implements Parcelable {
     public static final int FEATURE_STEP_DATE = 39; // This represents a DATE. "STEP" is a typo.
     public static final int FEATURE_BLAZE_BUILD_PROGRESS = 40;
     public static final int FEATURE_EARTHQUAKE_OCCURRED = 41;
+    // Our current iteration of smartspace is intended to just be a port of the legacy
+    // KeyguardSlice, so merging it all as a single feature was the path of least resistance. It can
+    // easily be split later.
+    public static final int FEATURE_DATE_ALARM_ZEN_MEDIA = Integer.MAX_VALUE;
 
     /**
      * @hide
@@ -230,7 +234,8 @@ public final class SmartspaceTarget implements Parcelable {
             FEATURE_EARTHQUAKE_ALERT,
             FEATURE_STEP_DATE,
             FEATURE_BLAZE_BUILD_PROGRESS,
-            FEATURE_EARTHQUAKE_OCCURRED
+            FEATURE_EARTHQUAKE_OCCURRED,
+            FEATURE_DATE_ALARM_ZEN_MEDIA
     })
     @Retention(RetentionPolicy.SOURCE)
     public @interface FeatureType {

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- id comes from com/android/systemui/keyguard/ui/view/layout/sections/SmartspaceSection.kt -->
+<com.android.systemui.keyguard.smartspace.LockscreenSmartspaceGeneralView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bc_smartspace_view"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="start"
+    android:clipToPadding="false"
+    android:orientation="vertical">
+    <view class="com.android.systemui.keyguard.smartspace.LockscreenSmartspaceGeneralView$Rows"
+              android:id="@+id/rows"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_gravity="start"
+              android:orientation="vertical"
+              android:gravity="start"
+    />
+</com.android.systemui.keyguard.smartspace.LockscreenSmartspaceGeneralView>

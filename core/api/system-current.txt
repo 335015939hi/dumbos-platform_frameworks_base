@@ -3163,6 +3163,7 @@ package android.app.smartspace {
     field public static final int FEATURE_COMMUTE_TIME = 3; // 0x3
     field public static final int FEATURE_CONSENT = 11; // 0xb
     field public static final int FEATURE_CROSS_DEVICE_TIMER = 32; // 0x20
+    field public static final int FEATURE_DATE_ALARM_ZEN_MEDIA = 2147483647; // 0x7fffffff
     field public static final int FEATURE_DOORBELL = 30; // 0x1e
     field public static final int FEATURE_DRIVING_MODE = 26; // 0x1a
     field public static final int FEATURE_EARTHQUAKE_ALERT = 38; // 0x26

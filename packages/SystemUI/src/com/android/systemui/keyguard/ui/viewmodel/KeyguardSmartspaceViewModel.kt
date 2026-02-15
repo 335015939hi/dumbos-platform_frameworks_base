@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
+import android.util.TypedValue
+
 @SysUISingleton
 class KeyguardSmartspaceViewModel
 @Inject
@@ -124,8 +126,13 @@ constructor(
         }
 
         fun getSmartspaceHorizontalMargin(context: Context): Int {
-            return context.resources.getDimensionPixelSize(R.dimen.smartspace_padding_horizontal) +
-                context.resources.getDimensionPixelSize(clocksR.dimen.status_view_margin_horizontal)
+            // This value comes from KeyguardSliceViewSection and results in the smartspace
+            // lockscreen general view being positioned in the same way as the KeyguardViewSlice
+            // was.
+            return context.resources.getDimensionPixelSize(clocksR.dimen.clock_padding_start) +
+                context.resources.getDimensionPixelSize(clocksR.dimen.status_view_margin_horizontal) +
+                TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 4f, context.resources.displayMetrics).toInt()
+
         }
     }
 }
