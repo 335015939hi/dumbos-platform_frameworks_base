@@ -1047,7 +1047,7 @@ class AppIdPermissionPolicy : SchemePolicy() {
         }
     }
 
-    private fun MutateStateScope.evaluateAllPermissionStatesForPackageAndUser(
+    fun MutateStateScope.evaluateAllPermissionStatesForPackageAndUser(
         packageState: PackageState,
         userId: Int,
         installedPackageState: PackageState?,
