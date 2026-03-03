@@ -37,6 +37,8 @@ public class ExtSettings {
 
     public static final BoolSetting SCRAMBLE_LOCKSCREEN_PIN_LAYOUT_PRIMARY = new BoolSetting(
             Setting.Scope.PER_USER, Settings.Secure.SCRAMBLE_PIN_LAYOUT_PRIMARY, false);
+    public static final BoolSetting SCRAMBLE_LOCKSCREEN_PIN_LAYOUT_SECONDARY = new BoolSetting(
+            Setting.Scope.PER_USER, Settings.Secure.SCRAMBLE_PIN_LAYOUT_SECONDARY, false);
 
     public static final BoolSetting SCRAMBLE_SIM_PIN_LAYOUT = new BoolSetting(
             Setting.Scope.PER_USER, Settings.Secure.SCRAMBLE_SIM_PIN_LAYOUT,

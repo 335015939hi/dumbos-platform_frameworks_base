@@ -7506,6 +7506,10 @@ public final class Settings {
         @Protected(read = KnownSystemPackage.SYSTEM_UI, readWrite = KnownSystemPackage.SETTINGS)
         public static final String SCRAMBLE_PIN_LAYOUT_PRIMARY =
                 "lockscreen_scramble_pin_layout";
+        /** @hide */
+        @Protected(read = KnownSystemPackage.SYSTEM_UI, readWrite = KnownSystemPackage.SETTINGS)
+        public static final String SCRAMBLE_PIN_LAYOUT_SECONDARY =
+                "lockscreen_scramble_pin_layout_secondary";
 
         /** @hide */
         @Protected(read = KnownSystemPackage.SYSTEM_UI, readWrite = KnownSystemPackage.SETTINGS)
