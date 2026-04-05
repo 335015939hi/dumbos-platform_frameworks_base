@@ -229,13 +229,13 @@ public class FaceAuthenticationClientTest {
     }
 
     @Test
-    public void testTemporaryLockoutEndsOperation() throws RemoteException {
+    public void testTemporaryLockoutUpgradedToPermanent() throws RemoteException {
         final FaceAuthenticationClient client = createClient(2);
         client.start(mCallback);
         client.onLockoutTimed(1000);
 
         verify(mClientMonitorCallbackConverter).onError(anyInt(), anyInt(),
-                eq(FACE_ERROR_LOCKOUT), anyInt());
+                eq(FACE_ERROR_LOCKOUT_PERMANENT), anyInt());
         verify(mCallback).onClientFinished(client, false);
     }
 

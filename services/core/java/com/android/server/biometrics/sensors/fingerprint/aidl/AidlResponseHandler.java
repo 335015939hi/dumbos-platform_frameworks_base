@@ -203,22 +203,32 @@ public class AidlResponseHandler extends ISessionCallback.Stub {
 
     @Override
     public void onLockoutTimed(long durationMillis) {
-        handleResponse(LockoutConsumer.class, (c) -> c.onLockoutTimed(durationMillis));
+        // old: handleResponse(LockoutConsumer.class, (c) -> c.onLockoutTimed(durationMillis));
+        Slog.d(TAG, "fingerprint AidlResponseHandler#onLockoutTimed("
+                + durationMillis
+                + "ms): Upgrading to a permanent lockout");
+        onLockoutPermanent();
     }
 
     @Override
     public void onLockoutPermanent() {
-        handleResponse(LockoutConsumer.class, LockoutConsumer::onLockoutPermanent);
+        handleResponse(LockoutConsumer.class, LockoutConsumer::onLockoutPermanent, null);
     }
 
     @Override
     public void onLockoutCleared() {
         handleResponse(FingerprintResetLockoutClient.class,
                 FingerprintResetLockoutClient::onLockoutCleared,
-                (c) -> FingerprintResetLockoutClient.resetLocalLockoutStateToNone(
-                        mSensorId, mUserId, mLockoutTracker, mLockoutResetDispatcher,
-                        mAuthSessionCoordinator, Utils.getCurrentStrength(mSensorId),
-                        -1 /* requestId */));
+                (c) -> {
+                    // Previously, AOSP had a FingerprintResetLockoutClient#resetLocalLockoutStateToNone
+                    // call here. The comment on that function says it "should only be called when
+                    // the HAL sends a reset request directly to the framework (i.e. time based
+                    // reset, etc.)". Removing that call here should disable HAL fingerprint service
+                    // calling this to do timed temporary lockout clearing.
+                    String name = c != null ? c.getClass().getName() : "null";
+                    Slog.d(TAG, "ignoring ISessionCallback::onLockoutCleared "
+                            + "from fingerprint HAL, current client " + name);
+                });
     }
 
     @Override
@@ -299,6 +309,7 @@ public class AidlResponseHandler extends ISessionCallback.Stub {
             @Nullable Consumer<BaseClientMonitor> alternateAction) {
         mScheduler.getHandler().post(() -> {
             final BaseClientMonitor client = mScheduler.getCurrentClient();
+            String cls = client != null ? client.getClass().getName() : "null";
             if (className.isInstance(client)) {
                 action.accept((T) client);
             } else {

@@ -425,6 +425,12 @@ public class FingerprintAuthenticationClient
 
     @Override
     public void onLockoutTimed(long durationMillis) {
+        if (true) {
+            Slog.w(TAG, "Upgrading timed lockout " + durationMillis + "ms to permanent lockout");
+            onLockoutPermanent();
+            return;
+        }
+
         mAuthSessionCoordinator.lockOutTimed(getTargetUserId(), getSensorStrength(), getSensorId(),
                 durationMillis, getRequestId());
         // Lockout metrics are logged as an error code.

@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -170,31 +171,27 @@ public class HidlToAidlSensorAdapterTest {
     }
 
     @Test
-    public void lockoutTimedResetViaCallback() {
+    public void lockoutTimedIgnoredViaCallback() {
         setLockoutTimed();
 
         mHidlToAidlSensorAdapter.getLazySession().get().getHalSessionCallback().onLockoutCleared();
         mLooper.dispatchAll();
 
-        verify(mLockoutResetDispatcherForSensor, times(2)).notifyLockoutResetCallbacks(eq(
-                SENSOR_ID));
         assertThat(mHidlToAidlSensorAdapter.getLockoutTracker(false /* forAuth */)
-                .getLockoutModeForUser(USER_ID)).isEqualTo(LockoutTracker.LOCKOUT_NONE);
-        verify(mAuthSessionCoordinator).resetLockoutFor(eq(USER_ID), anyInt(), anyLong());
+                .getLockoutModeForUser(USER_ID)).isEqualTo(LockoutTracker.LOCKOUT_PERMANENT);
+        verify(mAuthSessionCoordinator, never()).resetLockoutFor(anyInt(), anyInt(), anyLong());
     }
 
     @Test
-    public void lockoutPermanentResetViaCallback() {
+    public void lockoutIgnoredViaCallback() {
         setLockoutPermanent();
 
         mHidlToAidlSensorAdapter.getLazySession().get().getHalSessionCallback().onLockoutCleared();
         mLooper.dispatchAll();
-
-        verify(mLockoutResetDispatcherForSensor, times(2)).notifyLockoutResetCallbacks(eq(
-                SENSOR_ID));
+        // Lockout resets should only be done through framework code
         assertThat(mHidlToAidlSensorAdapter.getLockoutTracker(false /* forAuth */)
-                .getLockoutModeForUser(USER_ID)).isEqualTo(LockoutTracker.LOCKOUT_NONE);
-        verify(mAuthSessionCoordinator).resetLockoutFor(eq(USER_ID), anyInt(), anyLong());
+                .getLockoutModeForUser(USER_ID)).isEqualTo(LockoutTracker.LOCKOUT_PERMANENT);
+        verify(mAuthSessionCoordinator, never()).resetLockoutFor(anyInt(), anyInt(), anyLong());
     }
 
     @Test
@@ -257,7 +254,8 @@ public class HidlToAidlSensorAdapterTest {
                     .addFailedAttemptForUser(USER_ID);
         }
 
+        // Not allowing timed temporary lockouts
         assertThat(mHidlToAidlSensorAdapter.getLockoutTracker(false /* forAuth */)
-                .getLockoutModeForUser(USER_ID)).isEqualTo(LockoutTracker.LOCKOUT_TIMED);
+                .getLockoutModeForUser(USER_ID)).isEqualTo(LockoutTracker.LOCKOUT_PERMANENT);
     }
 }

@@ -211,7 +211,11 @@ public class AidlResponseHandler extends ISessionCallback.Stub {
 
     @Override
     public void onLockoutTimed(long durationMillis) {
-        handleResponse(LockoutConsumer.class, (c) -> c.onLockoutTimed(durationMillis));
+        // old: handleResponse(LockoutConsumer.class, (c) -> c.onLockoutTimed(durationMillis));
+        Slog.d(TAG, "face AidlResponseHandler#onLockoutTimed("
+                + durationMillis
+                + "ms): Upgrading to a permanent lockout");
+        onLockoutPermanent();
     }
 
     @Override
@@ -222,9 +226,16 @@ public class AidlResponseHandler extends ISessionCallback.Stub {
     @Override
     public void onLockoutCleared() {
         handleResponse(FaceResetLockoutClient.class, FaceResetLockoutClient::onLockoutCleared,
-                (c) -> FaceResetLockoutClient.resetLocalLockoutStateToNone(mSensorId, mUserId,
-                        mLockoutTracker, mLockoutResetDispatcher, mAuthSessionCoordinator,
-                        Utils.getCurrentStrength(mSensorId), -1 /* requestId */));
+                (c) -> {
+                    // Previously, AOSP had a FaceResetLockoutClient.resetLocalLockoutStateToNone
+                    // call here. The comment on that function says it "should only be called when
+                    // the HAL sends a reset request directly to the framework (i.e. time based
+                    // reset, etc.)". Removing that call here should disable HAL service
+                    // calling this to do timed temporary lockout clearing.
+                    String name = c != null ? c.getClass().getName() : "null";
+                    Slog.d(TAG, "ignoring ISessionCallback::onLockoutCleared "
+                            + "from face HAL, current client " + name);
+                });
     }
 
     @Override

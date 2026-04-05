@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -138,13 +139,16 @@ public class SensorTest {
     }
 
     @Test
-    public void halSessionCallback_respondsToUnprovokedResetLockout() {
+    public void halSessionCallback_ignoresUnprovokedResetLockout() {
         mLockoutCache.setLockoutModeForUser(USER_ID, LockoutTracker.LOCKOUT_TIMED);
 
         mHalCallback.onLockoutCleared();
         mLooper.dispatchAll();
 
-        verifyNotLocked();
+        assertEquals(LockoutTracker.LOCKOUT_TIMED,
+                mLockoutCache.getLockoutModeForUser(USER_ID));
+        verify(mLockoutResetDispatcher, never()).notifyLockoutResetCallbacks(anyInt());
+        verify(mAuthSessionCoordinator, never()).resetLockoutFor(anyInt(), anyInt(), anyLong());
     }
 
     @Test
