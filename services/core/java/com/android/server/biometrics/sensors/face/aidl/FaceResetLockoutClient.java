@@ -85,6 +85,11 @@ public class FaceResetLockoutClient extends HalClientMonitor<AidlSession> implem
             final ISession session = getFreshDaemon().getSession();
             session.resetLockout(mHardwareAuthToken);
             if (session instanceof HidlToAidlSessionAdapter) {
+                // HIDL resetLockout is synchronous (returns Status), but
+                // HidlToAidlSessionAdapter ignores the return value. The HAL also
+                // asynchronously calls AidlResponseHandler.onLockoutChanged(0), but
+                // that arrives after onClientFinished removes this client, so it
+                // won't go through handleResponse's FaceResetLockoutClient check.
                 mCallback.onClientFinished(this, true /* success */);
             }
         } catch (RemoteException e) {

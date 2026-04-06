@@ -55,6 +55,7 @@ import com.android.server.biometrics.sensors.face.aidl.AidlConversionUtils;
 import com.android.server.biometrics.sensors.face.aidl.AidlResponseHandler;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -66,6 +67,7 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 
+@Ignore("HIDL face HAL is not supported")
 @Presubmit
 @SmallTest
 public class HidlToAidlSessionAdapterTest {

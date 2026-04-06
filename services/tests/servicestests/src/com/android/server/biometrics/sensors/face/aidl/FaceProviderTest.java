@@ -176,7 +176,7 @@ public class FaceProviderTest {
     }
 
     @Test
-    public void testAddingHidlSensors() {
+    public void testAddingHidlSensors_rejected() {
         when(mResources.getIntArray(anyInt())).thenReturn(new int[]{});
         when(mResources.getBoolean(anyInt())).thenReturn(false);
 
@@ -194,13 +194,9 @@ public class FaceProviderTest {
                 true /* resetLockoutRequiresChallenge */,
                 true /* testHalEnabled */);
 
-        assertThat(mFaceProvider.mFaceSensors.get(faceId)
-                .getLazySession().get().getUserId()).isEqualTo(USER_NULL);
-
         waitForIdle();
 
-        assertThat(mFaceProvider.mFaceSensors.get(faceId)
-                .getLazySession().get().getUserId()).isEqualTo(USER_SYSTEM);
+        assertNull(mFaceProvider.mFaceSensors.get(faceId));
     }
 
     @SuppressWarnings("rawtypes")

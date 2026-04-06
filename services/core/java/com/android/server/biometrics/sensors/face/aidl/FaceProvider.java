@@ -234,10 +234,7 @@ public class FaceProvider implements IBinder.DeathRecipient, ServiceProvider {
             return;
         }
         if (resetLockoutRequiresChallenge) {
-            Slog.d(getTag(), "Adding HIDL configs");
-            for (SensorProps prop : props) {
-                addHidlSensors(prop, resetLockoutRequiresChallenge);
-            }
+            Slog.wtf(getTag(), "HIDL face HAL is not supported, ignoring configs");
         } else {
             Slog.d(getTag(), "Adding AIDL configs");
             for (SensorProps prop : props) {

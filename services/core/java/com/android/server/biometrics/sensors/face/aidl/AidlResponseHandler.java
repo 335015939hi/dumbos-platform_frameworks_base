@@ -308,6 +308,12 @@ public class AidlResponseHandler extends ISessionCallback.Stub {
      * Handles lockout changed messages sent by the HAL (specifically for HIDL HAL).
      */
     public void onLockoutChanged(long duration) {
+        if (duration == 0) {
+            // should never even call this function
+            throw new UnsupportedOperationException(
+                    "onLockoutChanged: HIDL face HAL is disabled on GrapheneOS");
+        }
+
         mScheduler.getHandler().post(() -> {
             @LockoutTracker.LockoutMode final int lockoutMode;
             if (duration == 0) {
@@ -315,7 +321,7 @@ public class AidlResponseHandler extends ISessionCallback.Stub {
             } else if (duration == -1 || duration == Long.MAX_VALUE) {
                 lockoutMode = LockoutTracker.LOCKOUT_PERMANENT;
             } else {
-                lockoutMode = LockoutTracker.LOCKOUT_TIMED;
+                lockoutMode = LockoutTracker.LOCKOUT_PERMANENT;
             }
 
             mLockoutTracker.setLockoutModeForUser(mUserId, lockoutMode);

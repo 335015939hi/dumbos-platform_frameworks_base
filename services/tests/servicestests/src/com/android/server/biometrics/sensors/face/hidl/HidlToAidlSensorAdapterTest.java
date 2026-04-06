@@ -60,12 +60,14 @@ import com.android.server.biometrics.sensors.face.aidl.FaceProvider;
 import com.android.server.biometrics.sensors.face.aidl.FaceResetLockoutClient;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
+@Ignore("HIDL face HAL is not supported")
 public class HidlToAidlSensorAdapterTest {
     private static final String TAG = "HidlToAidlSensorAdapterTest";
     private static final int USER_ID = 2;
