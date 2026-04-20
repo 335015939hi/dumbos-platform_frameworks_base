@@ -31,6 +31,8 @@ import static android.content.pm.GosPackageStateFlag.ENABLE_EXPLOIT_PROTECTION_C
 import static android.content.pm.GosPackageStateFlag.FORCE_MEMTAG;
 import static android.content.pm.GosPackageStateFlag.FORCE_MEMTAG_NON_DEFAULT;
 import static android.content.pm.GosPackageStateFlag.FORCE_MEMTAG_SUPPRESS_NOTIF;
+import static android.content.pm.GosPackageStateFlag.HIDE_CARRIER_INFO;
+import static android.content.pm.GosPackageStateFlag.HIDE_CARRIER_INFO_NON_DEFAULT;
 import static android.content.pm.GosPackageStateFlag.PLAY_INTEGRITY_API_USED_AT_LEAST_ONCE;
 import static android.content.pm.GosPackageStateFlag.RESTRICT_MEMORY_DYN_CODE_LOADING;
 import static android.content.pm.GosPackageStateFlag.RESTRICT_MEMORY_DYN_CODE_LOADING_NON_DEFAULT;
@@ -76,7 +78,7 @@ class GosPackageStatePermissions {
 
         selfAccessPermission = builder()
                 .readFlags(STORAGE_SCOPES_ENABLED, ALLOW_ACCESS_TO_OBB_DIRECTORY,
-                        CONTACT_SCOPES_ENABLED)
+                        CONTACT_SCOPES_ENABLED, HIDE_CARRIER_INFO)
                 .readFlags(playIntegrityFlags)
                 .readWriteFlag(PLAY_INTEGRITY_API_USED_AT_LEAST_ONCE)
                 .create();
@@ -141,6 +143,8 @@ class GosPackageStatePermissions {
                 FORCE_MEMTAG,
                 FORCE_MEMTAG_SUPPRESS_NOTIF,
                 ENABLE_EXPLOIT_PROTECTION_COMPAT_MODE,
+                HIDE_CARRIER_INFO_NON_DEFAULT,
+                HIDE_CARRIER_INFO,
         };
         builder()
                 .readWriteFlags(settingsReadWriteFlags)

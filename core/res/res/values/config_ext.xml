@@ -51,4 +51,7 @@
     </string-array>
     <java-symbol type="array" name="read_additional_security_state_known_signers" />
 
+    <bool name="setting_default_hide_carrier_info">false</bool>
+    <java-symbol type="bool" name="setting_default_hide_carrier_info" />
+
 </resources>

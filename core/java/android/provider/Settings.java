@@ -14519,6 +14519,10 @@ public final class Settings {
                 KnownSystemPackage.SETUP_WIZARD})
         public static final String GEOCODER = "geocoder";
 
+        /** @hide */
+        @Protected(readWrite = KnownSystemPackage.SETTINGS)
+        public static final String HIDE_CARRIER_INFO_BY_DEFAULT = "hide_carrier_info";
+
         // ExtSettings END
 
         // NOTE: If you add new settings here, be sure to add them to

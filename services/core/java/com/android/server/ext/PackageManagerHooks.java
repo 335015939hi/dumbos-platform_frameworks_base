@@ -120,6 +120,9 @@ public class PackageManagerHooks {
         flagsArr[AppBindArgs.FLAGS_IDX_DYN_CODE_LOADING] =
                 android.ext.dcl.DynCodeLoading.getAppBindFlags(context, userId, appInfo, unfilteredGosPs);
 
+        flagsArr[AppBindArgs.FLAGS_IDX_HIDE_CARRIER_INFO] =
+                android.ext.carrierinfo.HideCarrierInfo.getAppBindFlags(context, userId, appInfo, unfilteredGosPs);
+
         var b = new Bundle();
         b.putParcelable(AppBindArgs.KEY_GOS_PACKAGE_STATE, gosPs);
         b.putIntArray(AppBindArgs.KEY_FLAGS_ARRAY, flagsArr);
