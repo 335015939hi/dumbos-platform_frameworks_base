@@ -1,0 +1,18 @@
+android_test_helper_app {
+    name: "HideCarrierInfoTestApp",
+
+    srcs: [
+        "src/**/*.java",
+        "src/**/*.kt",
+    ],
+
+    platform_apis: true,
+
+    optimize: { enabled: false },
+
+    static_libs: [
+        "androidx.appcompat_appcompat",
+        "androidx.test.core",
+        "androidx.test.rules",
+    ],
+}
