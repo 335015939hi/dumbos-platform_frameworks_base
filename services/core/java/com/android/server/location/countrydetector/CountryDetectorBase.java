@@ -52,6 +52,17 @@ public abstract class CountryDetectorBase {
     public abstract Country detectCountry();
 
     /**
+     * unknown subclasses return null because they may use
+     * SIM/network without the caller being able to tell.
+     */
+    public Country detectCountry(boolean hideCarrierSource) {
+        if (hideCarrierSource) {
+            return null;
+        }
+        return detectCountry();
+    }
+
+    /**
      * Register a listener to receive the notification when the country is detected or changed.
      * <p>
      * The previous listener will be replaced if it exists.
