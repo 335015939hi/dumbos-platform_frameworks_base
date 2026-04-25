@@ -490,6 +490,10 @@ int DumpBriefPackageInfo::Action(const std::vector<std::string>& args) {
           } else {
             bpi.add_optional_uses_library(name->value);
           }
+        } else if (app_child->name == "library") {
+          xml::Attribute* name = app_child->FindAttribute(xml::kSchemaAndroid, "name");
+          CHECK(!name->value.empty());
+          bpi.add_library(name->value);
         }
       }
     }

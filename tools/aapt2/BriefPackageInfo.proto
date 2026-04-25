@@ -15,4 +15,5 @@ message BriefPackageInfo {
   repeated string content_provider_authority = 7;
   repeated string uses_library = 8;
   repeated string optional_uses_library = 9;
+  repeated string library = 10;
 }
