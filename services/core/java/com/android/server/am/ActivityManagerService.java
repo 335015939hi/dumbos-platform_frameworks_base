@@ -344,6 +344,7 @@ import android.content.pm.AllowComponentAccessPolicyInfo;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.ApplicationInfo.HiddenApiEnforcementPolicy;
 import android.content.pm.GosPackageState;
+import android.content.pm.GosPackageStateFlag;
 import android.content.pm.IPackageDataObserver;
 import android.content.pm.IPackageManager;
 import android.content.pm.IncrementalStatesInfo;
@@ -457,6 +458,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.autofill.AutofillManagerInternal;
+
+import android.ext.settings.app.AswHideCarrierInfo;
 
 import com.android.internal.annotations.CompositeRWLock;
 import com.android.internal.annotations.GuardedBy;
@@ -21371,5 +21374,33 @@ public class ActivityManagerService extends IActivityManager.Stub
         UUID errorId = mTraceErrorLogger.getOrCreateErrorId(anrId);
         mAnrWarningController.notifyAnrWarning(
                 uid, anrId, errorId, anrType, consumedTimeMs, timeoutMs, description);
+    }
+
+    @Override
+    public boolean shouldHideCarrierInfoForUid(int targetUid, String apiName) {
+        final int callerUid = Binder.getCallingUid();
+        if (callerUid != Process.PHONE_UID
+                && UserHandle.getAppId(callerUid) != Process.SYSTEM_UID) {
+            throw new SecurityException(
+                    "shouldHideCarrierInfoForUid requires system/phone caller, got uid " + callerUid);
+        }
+        final long token = Binder.clearCallingIdentity();
+        try {
+            String[] pkgs = mContext.getPackageManager().getPackagesForUid(targetUid);
+            if (pkgs == null) {
+                return false;
+            }
+            int userId = UserHandle.getUserId(targetUid);
+            ApplicationInfo appInfo;
+            try {
+                appInfo = mContext.getPackageManager().getApplicationInfo(pkgs[0], 0);
+            } catch (NameNotFoundException e) {
+                return false;
+            }
+            GosPackageState ps = GosPackageState.get(pkgs[0], userId);
+            return AswHideCarrierInfo.I.get(mContext, userId, appInfo, ps);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
     }
 }
