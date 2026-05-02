@@ -362,14 +362,16 @@ enum RuntimeFlags : uint32_t {
 
 struct ExtraArgs {
     uint64_t selinux_flags = 0;
+    bool bind_mount_extended_sysprop_overrides = false;
 
     ExtraArgs() {}
 
     ExtraArgs(JNIEnv* env, jlongArray jlongArgs) {
-        const size_t num_jlong_args = 1;
+        const size_t num_jlong_args = 2;
         jlong jlong_arr[num_jlong_args];
         env->GetLongArrayRegion(jlongArgs, 0, num_jlong_args, (jlong *) &jlong_arr);
         selinux_flags = (uint64_t) jlong_arr[0];
+        bind_mount_extended_sysprop_overrides = (jlong_arr[1] != 0);
     }
 };
 
@@ -1753,6 +1755,20 @@ static void BindMountSyspropOverride(fail_fn_t fail_fn, JNIEnv* env) {
     // TODO: when ReloadBuildJavaConstants is needed, make it skip reloading of unaffected constants
 }
 
+static void BindMountExtendedSyspropOverride(fail_fn_t fail_fn, JNIEnv* env) {
+    std::string source = "/dev/__properties__/extended_override";
+    std::string target = "/dev/__properties__";
+    if (access(source.c_str(), F_OK) != 0) {
+      return;
+    }
+    if (access(target.c_str(), F_OK) != 0) {
+        return;
+    }
+    BindMount(source, target, fail_fn);
+    __system_properties_zygote_reload();
+    // see the TODO above BindMountSyspropOverride
+}
+
 static void BindMountStorageToLowerFs(const userid_t user_id, const uid_t uid,
     const char* dir_name, const char* package, fail_fn_t fail_fn) {
     bool hasSdcardFs = IsSdcardfsUsed();
@@ -1978,7 +1994,9 @@ static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, 
                              fail_fn);
     }
 
-    if (mount_sysprop_overrides) {
+    if (extra_args.bind_mount_extended_sysprop_overrides) {
+        BindMountExtendedSyspropOverride(fail_fn, env);
+    } else if (mount_sysprop_overrides) {
         BindMountSyspropOverride(fail_fn, env);
     }
 
