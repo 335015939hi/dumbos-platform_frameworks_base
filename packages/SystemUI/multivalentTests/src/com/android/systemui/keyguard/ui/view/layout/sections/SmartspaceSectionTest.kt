@@ -37,6 +37,7 @@ import com.android.systemui.plugins.keyguard.ui.clocks.ClockViewIds
 import com.android.systemui.res.R
 import com.android.systemui.shared.R as sharedR
 import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController
+import com.android.systemui.statusbar.policy.ConfigurationController
 import com.google.common.truth.Truth.assertThat
 import dagger.Lazy
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,6 +61,7 @@ class SmartspaceSectionTest : SysuiTestCase() {
     @Mock private lateinit var keyguardSmartspaceInteractor: KeyguardSmartspaceInteractor
     @Mock private lateinit var blueprintInteractor: Lazy<KeyguardBlueprintInteractor>
     @Mock private lateinit var keyguardRootViewModel: KeyguardRootViewModel
+    @Mock private lateinit var configurationController: ConfigurationController
 
     private val smartspaceView = View(mContext).also { it.id = sharedR.id.bc_smartspace_view }
     private val weatherView = View(mContext).also { it.id = sharedR.id.weather_smartspace_view }
@@ -88,6 +90,7 @@ class SmartspaceSectionTest : SysuiTestCase() {
                 keyguardUnlockAnimationController,
                 blueprintInteractor,
                 keyguardRootViewModel,
+                configurationController,
             )
         constraintLayout = ConstraintLayout(mContext)
         whenever(lockscreenSmartspaceController.buildAndConnectView(any()))

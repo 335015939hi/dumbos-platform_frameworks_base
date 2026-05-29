@@ -34,6 +34,7 @@ import com.android.systemui.kosmos.Kosmos
 import com.android.systemui.log.logcatLogBuffer
 import com.android.systemui.shade.LargeScreenHeaderHelper
 import com.android.systemui.statusbar.lockscreen.lockscreenSmartspaceController
+import com.android.systemui.statusbar.policy.configurationController
 import java.util.Optional
 import org.mockito.Mockito.spy
 import org.mockito.kotlin.mock
@@ -63,6 +64,7 @@ val Kosmos.keyguardSmartspaceSection: SmartspaceSection by
             keyguardUnlockAnimationController = keyguardUnlockAnimationController,
             blueprintInteractor = { keyguardBlueprintInteractor },
             keyguardRootViewModel = keyguardRootViewModel,
+            configurationController = configurationController,
         )
     }
 
