@@ -28,16 +28,39 @@ public class ExecInit {
      *
      * The first argument is the target SDK version for the app.
      *
+     * The second argument is the runtime flags.
+     *
+     * The third argument is the number of disabled compat changes, followed by
+     * the disabled compat change IDs.
+     *
      * The remaining arguments are passed to the runtime.
      *
      * @param args The command-line arguments.
      */
     public static void main(String[] args) {
+        if (args.length < 3) {
+            throw new IllegalArgumentException("Missing mandatory arguments");
+        }
+
         // Parse our mandatory argument.
         int targetSdkVersion = Integer.parseInt(args[0], 10);
 
         // Parse the runtime_flags.
         int runtimeFlags = Integer.parseInt(args[1], 10);
+
+        int disabledCompatChangesCount = Integer.parseInt(args[2], 10);
+        if (disabledCompatChangesCount < 0 || disabledCompatChangesCount > args.length - 3) {
+            throw new IllegalArgumentException("Invalid disabled compat changes count: "
+                    + disabledCompatChangesCount);
+        }
+
+        long[] disabledCompatChanges = null;
+        if (disabledCompatChangesCount != 0) {
+            disabledCompatChanges = new long[disabledCompatChangesCount];
+            for (int i = 0; i < disabledCompatChangesCount; ++i) {
+                disabledCompatChanges[i] = Long.parseLong(args[3 + i], 10);
+            }
+        }
 
         // Mimic system Zygote preloading.
         ZygoteInit.preload(new TimingsTraceLog("ExecInitTiming",
@@ -47,9 +70,10 @@ public class ExecInit {
         ZygoteHooks.postExecSpawn(runtimeFlags & ~Zygote.CUSTOM_RUNTIME_FLAGS);
 
         // Launch the application.
-        String[] runtimeArgs = new String[args.length - 2];
-        System.arraycopy(args, 2, runtimeArgs, 0, runtimeArgs.length);
-        Runnable r = execInit(targetSdkVersion, runtimeArgs);
+        int runtimeArgsStart = 3 + disabledCompatChangesCount;
+        String[] runtimeArgs = new String[args.length - runtimeArgsStart];
+        System.arraycopy(args, runtimeArgsStart, runtimeArgs, 0, runtimeArgs.length);
+        Runnable r = execInit(targetSdkVersion, disabledCompatChanges, runtimeArgs);
 
         Zygote.nativeHandleRuntimeFlags(runtimeFlags);
 
@@ -73,12 +97,18 @@ public class ExecInit {
      *
      * @param niceName The nice name for the application, or null if none.
      * @param targetSdkVersion The target SDK version for the app.
+     * @param instructionSet The instruction set to use.
+     * @param runtimeFlags The runtime flags for the app.
+     * @param disabledCompatChanges nullable list of disabled compat changes for the process being
+     *                              started.
      * @param args Arguments for {@link RuntimeInit#main}.
      */
     public static void execApplication(String niceName, int targetSdkVersion,
-            String instructionSet, int runtimeFlags, String[] args) {
+            String instructionSet, int runtimeFlags, long[] disabledCompatChanges, String[] args) {
         int niceArgs = niceName == null ? 0 : 1;
-        int baseArgs = 6 + niceArgs;
+        int disabledCompatChangesCount =
+                disabledCompatChanges != null ? disabledCompatChanges.length : 0;
+        int baseArgs = 7 + niceArgs + disabledCompatChangesCount;
         String[] argv = new String[baseArgs + args.length];
         if (VMRuntime.is64BitInstructionSet(instructionSet)) {
             argv[0] = "/system/bin/app_process64";
@@ -93,6 +123,10 @@ public class ExecInit {
         argv[3 + niceArgs] = "com.android.internal.os.ExecInit";
         argv[4 + niceArgs] = Integer.toString(targetSdkVersion);
         argv[5 + niceArgs] = Integer.toString(runtimeFlags);
+        argv[6 + niceArgs] = Integer.toString(disabledCompatChangesCount);
+        for (int i = 0; i < disabledCompatChangesCount; ++i) {
+            argv[7 + niceArgs + i] = Long.toString(disabledCompatChanges[i]);
+        }
         System.arraycopy(args, 0, argv, baseArgs, args.length);
 
         WrapperInit.preserveCapabilities();
@@ -134,9 +168,11 @@ public class ExecInit {
      * So we don't need to call commonInit() here.
      *
      * @param targetSdkVersion target SDK version
+     * @param disabledCompatChanges set of disabled compat changes for the process
      * @param argv arg strings
      */
-    private static Runnable execInit(int targetSdkVersion, String[] argv) {
+    private static Runnable execInit(int targetSdkVersion, long[] disabledCompatChanges,
+            String[] argv) {
         if (RuntimeInit.DEBUG) {
             Slog.d(RuntimeInit.TAG, "RuntimeInit: Starting application from exec");
         }
@@ -163,6 +199,7 @@ public class ExecInit {
         if (Process.isIsolated()) {
             System.gc();
         }
-        return RuntimeInit.applicationInit(targetSdkVersion, /*disabledCompatChanges*/ null, argv, classLoader);
+        return RuntimeInit.applicationInit(targetSdkVersion, disabledCompatChanges, argv,
+                classLoader);
     }
 }
