@@ -8,6 +8,7 @@ import android.system.OsConstants;
 import android.util.Slog;
 import android.util.TimingsTraceLog;
 import dalvik.system.VMRuntime;
+import dalvik.system.ZygoteHooks;
 
 /**
  * Startup class for the process.
@@ -41,6 +42,9 @@ public class ExecInit {
         // Mimic system Zygote preloading.
         ZygoteInit.preload(new TimingsTraceLog("ExecInitTiming",
                 Trace.TRACE_TAG_DALVIK), false);
+        // Match the hidden API policy setup normally performed by
+        // ZygoteHooks.postForkChild() before loading the app entrypoint.
+        ZygoteHooks.postExecSpawn(runtimeFlags & ~Zygote.CUSTOM_RUNTIME_FLAGS);
 
         // Launch the application.
         String[] runtimeArgs = new String[args.length - 2];
