@@ -11,6 +11,10 @@
     },
     {
       "name": "GosCompatWifiScanTimeoutTests"
+    },
+    // adb root not required, only useful to delete tombstones
+    {
+      "name": "GosCompatMemoryTests"
     }
   ]
 }

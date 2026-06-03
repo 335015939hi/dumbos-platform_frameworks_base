@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration description="Runs GosCompatMemoryTests">
+    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
+        <option name="cleanup" value="true" />
+        <option name="push" value="goscompat_smaps_native_runner->/data/local/tmp/goscompat_smaps_native_runner" />
+    </target_preparer>
+
+    <test class="com.android.tradefed.testtype.HostTest">
+        <option name="jar" value="GosCompatMemoryTests.jar" />
+    </test>
+</configuration>
