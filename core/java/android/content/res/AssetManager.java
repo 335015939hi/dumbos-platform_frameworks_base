@@ -268,6 +268,9 @@ public final class AssetManager implements AutoCloseable {
         }
     }
 
+    /** @hide */
+    public static volatile String[] systemIdmapPaths_;
+
     /**
      * This must be called from Zygote so that system assets are shared by all applications.
      * @hide
@@ -285,9 +288,29 @@ public final class AssetManager implements AutoCloseable {
             apkAssets.add(ApkAssets.loadFromPath(frameworkPath, ApkAssets.PROPERTY_SYSTEM));
 
             // TODO(Ravenwood): overlay support?
-            final String[] systemIdmapPaths =
-                    RavenwoodHelperBridge.getInstance().isRunningOnRavenwood() ? new String[0] :
-                    OverlayConfig.getZygoteInstance().createImmutableFrameworkIdmapsInZygote();
+            String[] systemIdmapPaths;
+            if (RavenwoodHelperBridge.getInstance().isRunningOnRavenwood()) {
+                systemIdmapPaths = new String[0];
+            } else {
+                // createImmutableFrameworkIdmapsInZygote() should be called only in zygote, it fails
+                // in regular processes and is unnecessary there.
+                // When it's called in zygote, overlay state is cached in /data/resource-cache/*@idmap
+                // files. These files are readable by regular app processes.
+                //
+                // When exec-based spawning in used, in-memory cache of assets is lost, and the spawned
+                // process is unable to recreate it, since it's not allowed to create idmaps.
+                //
+                // To resolve this issue, idmap paths are passed from system_server via AppBindArgs.
+                // system_server always uses zygote-based spawning.
+                systemIdmapPaths = systemIdmapPaths_;
+                if (systemIdmapPaths != null) {
+                    Log.d(TAG, "reusing systemIdmapPaths");
+                } else {
+                    systemIdmapPaths = OverlayConfig.getZygoteInstance().createImmutableFrameworkIdmapsInZygote();
+                    systemIdmapPaths_ = systemIdmapPaths;
+                }
+            }
+
             for (String idmapPath : systemIdmapPaths) {
                 apkAssets.add(ApkAssets.loadOverlayFromPath(idmapPath, ApkAssets.PROPERTY_SYSTEM));
             }

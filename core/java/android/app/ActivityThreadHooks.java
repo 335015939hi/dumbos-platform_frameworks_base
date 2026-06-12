@@ -4,6 +4,7 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.content.pm.GosPackageState;
 import android.content.pm.SrtPermissions;
+import android.content.res.AssetManager;
 import android.ext.dcl.DynCodeLoading;
 import android.location.HookedLocationManager;
 import android.os.Bundle;
@@ -31,6 +32,8 @@ class ActivityThreadHooks {
 
         Preconditions.checkState(!onBindCalled);
         onBindCalled = true;
+
+        AssetManager.systemIdmapPaths_ = args.getStringArray(AppBindArgs.KEY_SYSTEM_IDMAP_PATHS);
 
         AppGlobals.setInitialPackageId(appBindData.appInfo.ext().getPackageId());
 

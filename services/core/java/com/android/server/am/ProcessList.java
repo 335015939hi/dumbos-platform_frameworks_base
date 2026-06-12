@@ -33,6 +33,7 @@ import static android.os.MessageQueue.OnFileDescriptorEventListener.EVENT_INPUT;
 import static android.os.Process.SYSTEM_UID;
 import static android.os.Process.THREAD_PRIORITY_BACKGROUND;
 import static android.os.Process.ZYGOTE_POLICY_FLAG_EMPTY;
+import static android.os.Process.ZYGOTE_POLICY_FLAG_NATIVE_PROCESS;
 import static android.os.Process.getAdvertisedMem;
 import static android.os.Process.getMemAvailable;
 import static android.os.Process.getMemFree;
@@ -147,6 +148,7 @@ import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.Trace;
 import android.os.UserHandle;
+import android.os.ZygoteProcess;
 import android.provider.DeviceConfig;
 import android.system.Os;
 import android.system.OsConstants;
@@ -164,12 +166,15 @@ import android.util.SparseBooleanArray;
 import android.util.TimeUtils;
 import android.util.proto.ProtoOutputStream;
 import android.view.Display;
+import android.webkit.WebViewZygote;
 
 import com.android.internal.annotations.CompositeRWLock;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.app.ProcessMap;
+import com.android.internal.os.ExecSpawning;
 import com.android.internal.os.Zygote;
+import com.android.internal.os.ZygoteExtraArgs;
 import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.MemInfoReader;
 import com.android.server.AppStateTracker;
@@ -210,6 +215,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -2062,11 +2068,56 @@ public final class ProcessList extends ProcessListInternal
                 definingAppInfo = app.info;
             }
 
-            runtimeFlags |= Zygote.getMemorySafetyRuntimeFlags(
+            var shouldForciblyEnableMemoryTagging = new AtomicBoolean(false);
+            runtimeFlags |= Zygote.getMemorySafetyRuntimeFlags(shouldForciblyEnableMemoryTagging,
                     definingAppInfo, app.processInfo, instructionSet, mPlatformCompat);
 
             if (isOutgoingTransactionsAuditable(definingAppInfo.uid)) {
                 runtimeFlags |= Zygote.AUDIT_OUTGOING_TRANSACTIONS;
+            }
+
+            final Context ctx = mService.mContext;
+            final PackageManagerInternal pmi = mService.getPackageManagerInternal();
+            final ZygoteExtraArgs zygoteExtArgs;
+            if (hostingRecord.usesWebviewZygote_()) {
+                // See commits fe85ed2ef53a7b1442a0e87f47e23e407e3e2b8c and b9a8666eb5504f022343fef9087135b7d937ddf8
+                String callerPkgName = app.info.packageName;
+
+                if (!app.isolated) {
+                   throw new IllegalStateException("non-isolated WebView process for callerPkg "
+                                                   + callerPkgName);
+                }
+
+                // app.info is not actually callerAppInfo, it's definingAppInfo with packageName and
+                // uid replaced by values from callerAppInfo
+                ApplicationInfo callerAppInfo =
+                        pmi.getApplicationInfo(callerPkgName, 0, SYSTEM_UID, userId);
+
+                if (callerAppInfo == null) {
+                    throw new IllegalStateException("callerAppInfo is null");
+                }
+
+                GosPackageState callerPs = pmi.getGosPackageState(callerPkgName, userId);
+
+                zygoteExtArgs = ZygoteExtraArgs.createForWebviewProcess(ctx, userId, callerAppInfo, callerPs);
+            } else {
+                GosPackageState ps = pmi.getGosPackageState(definingAppInfo.packageName, userId);
+
+                zygoteExtArgs = ZygoteExtraArgs.create(ctx, userId, definingAppInfo,
+                        shouldForciblyEnableMemoryTagging.get(), ps, app.isolated, zygotePolicyFlags);
+                if (zygoteExtArgs.shouldUseExecSpawning()) {
+                    ApplicationInfo appInfoForPreloading = hostingRecord.getAppInfoForPreloading();
+
+                    boolean isNative = (zygotePolicyFlags & ZYGOTE_POLICY_FLAG_NATIVE_PROCESS) != 0;
+                    if (appInfoForPreloading != null && !ExecSpawning
+                            .shouldSkipZygotePreload(appInfoForPreloading, isNative)) {
+                        if (isNative) {
+                            zygoteExtArgs.setPreloadAppInfo(appInfoForPreloading);
+                        } else {
+                            zygoteExtArgs.setFlag(ZygoteExtraArgs.Flag.MANUALLY_RUN_ZYGOTE_PRELOAD, true);
+                        }
+                    }
+                }
             }
 
             // the per-user SELinux context must be set
@@ -2082,7 +2133,7 @@ public final class ProcessList extends ProcessListInternal
             // the PID of the new process, or else throw a RuntimeException.
             final String entryPoint = "android.app.ActivityThread";
 
-            return startProcessLocked(hostingRecord, entryPoint, app, uid, gids,
+            return startProcessLocked(zygoteExtArgs, hostingRecord, entryPoint, app, uid, gids,
                     runtimeFlags, zygotePolicyFlags, mountExternal, seInfo, requiredAbi,
                     instructionSet, invokeWith, startUptime, startElapsedTime);
         } catch (RuntimeException e) {
@@ -2143,7 +2194,7 @@ public final class ProcessList extends ProcessListInternal
     }
 
     @GuardedBy("mService")
-    boolean startProcessLocked(HostingRecord hostingRecord, String entryPoint, ProcessRecord app,
+    boolean startProcessLocked(ZygoteExtraArgs zygoteExtArgs, HostingRecord hostingRecord, String entryPoint, ProcessRecord app,
             int uid, int[] gids, int runtimeFlags, int zygotePolicyFlags, int mountExternal,
             String seInfo, String requiredAbi, String instructionSet, String invokeWith,
             long startUptime, long startElapsedTime) {
@@ -2180,13 +2231,13 @@ public final class ProcessList extends ProcessListInternal
         if (mService.mConstants.FLAG_PROCESS_START_ASYNC) {
             if (DEBUG_PROCESSES) Slog.i(TAG_PROCESSES,
                     "Posting procStart msg for " + app.toShortString());
-            mService.mProcStartHandler.post(() -> handleProcessStart(
+            mService.mProcStartHandler.post(() -> handleProcessStart(zygoteExtArgs,
                     app, entryPoint, gids, runtimeFlags, zygotePolicyFlags, mountExternal,
                     requiredAbi, instructionSet, invokeWith, startSeq));
             return true;
         } else {
             try {
-                final Process.ProcessStartResult startResult = startProcess(hostingRecord,
+                final Process.ProcessStartResult startResult = startProcess(zygoteExtArgs, hostingRecord,
                         entryPoint, app,
                         uid, gids, runtimeFlags, zygotePolicyFlags, mountExternal, seInfo,
                         requiredAbi, instructionSet, invokeWith, startUptime);
@@ -2208,13 +2259,13 @@ public final class ProcessList extends ProcessListInternal
      *
      * <p>Note: this function doesn't hold the global AM lock intentionally.</p>
      */
-    private void handleProcessStart(final ProcessRecord app, final String entryPoint,
+    private void handleProcessStart(final ZygoteExtraArgs zygoteExtArgs, final ProcessRecord app, final String entryPoint,
             final int[] gids, final int runtimeFlags, int zygotePolicyFlags,
             final int mountExternal, final String requiredAbi, final String instructionSet,
             final String invokeWith, final long startSeq) {
         final Runnable startRunnable = () -> {
             try {
-                final Process.ProcessStartResult startResult = startProcess(app.getHostingRecord(),
+                final Process.ProcessStartResult startResult = startProcess(zygoteExtArgs, app.getHostingRecord(),
                         entryPoint, app, app.getStartUid(), gids, runtimeFlags, zygotePolicyFlags,
                         mountExternal, app.getSeInfo(), requiredAbi, instructionSet, invokeWith,
                         app.getStartTime());
@@ -2505,7 +2556,7 @@ public final class ProcessList extends ProcessListInternal
                 && mountMode != Zygote.MOUNT_EXTERNAL_NONE;
     }
 
-    private Process.ProcessStartResult startProcess(HostingRecord hostingRecord, String entryPoint,
+    private Process.ProcessStartResult startProcess(ZygoteExtraArgs zygoteExtArgs, HostingRecord hostingRecord, String entryPoint,
             ProcessRecord app, int uid, int[] gids, int runtimeFlags, int zygotePolicyFlags,
             int mountExternal, String seInfo, String requiredAbi, String instructionSet,
             String invokeWith, long startTime) {
@@ -2632,20 +2683,22 @@ public final class ProcessList extends ProcessListInternal
             }
 
             final Process.ProcessStartResult startResult;
-            boolean regularZygote = false;
+            boolean regularZygote = zygoteExtArgs.shouldUseExecSpawning();
             app.mProcessGroupCreated = false;
             app.mSkipProcessGroupCreation = false;
             long forkTimeNs = SystemClock.uptimeNanos();
             final boolean useDeliQueue = mPlatformCompat.getUseDeliQueue(app.info);
-            if (hostingRecord.usesWebviewZygote()) {
-                startResult = startWebView(entryPoint,
+            if (hostingRecord.usesWebviewZygote_()) {
+                ZygoteProcess zygoteProcess = zygoteExtArgs.shouldUseExecSpawning() ?
+                        Process.ZYGOTE_PROCESS : WebViewZygote.getProcess();
+                startResult = startWebView(zygoteProcess, zygoteExtArgs, entryPoint,
                         app.processName, uid, uid, gids, runtimeFlags, mountExternal,
                         app.info.targetSdkVersion, seInfo, requiredAbi, instructionSet,
                         app.info.dataDir, null, app.info.packageName,
                         app.getDisabledCompatChanges(), app.getEnabledCompatChanges(),
                         useDeliQueue, app.getStartSeq(),
                         new String[]{PROC_START_SEQ_IDENT + app.getStartSeq()});
-            } else if (hostingRecord.usesAppZygote()) {
+            } else if (hostingRecord.usesAppZygote_()) {
                 final AppZygote appZygote = createAppZygoteForProcessIfNeeded(app);
 
                 if (Flags.useSafesetidUidPolicy2()
@@ -2660,7 +2713,7 @@ public final class ProcessList extends ProcessListInternal
                 }
 
                 // We can't isolate app data and storage data as parent zygote already did that.
-                startResult = appZygote.startProcess(entryPoint,
+                startResult = appZygote.startProcess(zygoteExtArgs, entryPoint,
                         app.processName, uid, gids, runtimeFlags, mountExternal,
                         app.info.targetSdkVersion, seInfo, requiredAbi, instructionSet,
                         app.info.dataDir, app.info.packageName, isTopApp,
@@ -2670,7 +2723,7 @@ public final class ProcessList extends ProcessListInternal
                         new String[]{PROC_START_SEQ_IDENT + app.getStartSeq()});
             } else {
                 regularZygote = true;
-                startResult = Process.start(entryPoint,
+                startResult = Process.start(zygoteExtArgs, entryPoint,
                         app.processName, uid, uid, gids, runtimeFlags, mountExternal,
                         app.info.targetSdkVersion, seInfo, requiredAbi, instructionSet,
                         app.info.dataDir, invokeWith, app.info.packageName, zygotePolicyFlags,
@@ -3492,7 +3545,7 @@ public final class ProcessList extends ProcessListInternal
     @GuardedBy("mService")
     private IsolatedUidRange getOrCreateIsolatedUidRangeLocked(ApplicationInfo info,
             HostingRecord hostingRecord) {
-        if (hostingRecord == null || !hostingRecord.usesAppZygote()) {
+        if (hostingRecord == null || !hostingRecord.usesAppZygote_()) {
             // Allocate an isolated UID from the global range
             return mGlobalIsolatedUids;
         } else if (Flags.useSafesetidUidPolicy2() && UidTransitionPolicy.isEnabled()) {

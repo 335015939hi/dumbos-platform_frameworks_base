@@ -20,6 +20,7 @@ import static android.net.http.Flags.preloadHttpengineInZygote;
 import static android.system.OsConstants.S_IRWXG;
 import static android.system.OsConstants.S_IRWXO;
 
+import static com.android.internal.os.ExecSpawning.COMMAND_FD_ARG;
 import static com.android.internal.util.FrameworkStatsLog.BOOT_TIME_EVENT_ELAPSED_TIME__EVENT__SECONDARY_ZYGOTE_INIT_START;
 import static com.android.internal.util.FrameworkStatsLog.BOOT_TIME_EVENT_ELAPSED_TIME__EVENT__ZYGOTE_INIT_START;
 
@@ -125,23 +126,25 @@ public class ZygoteInit {
      */
     private static ClassLoader sCachedSystemServerClassLoader = null;
 
-    static void preload(TimingsTraceLog bootTimingsTraceLog) {
+    static void preload(TimingsTraceLog bootTimingsTraceLog, boolean fullPreload) {
         Log.d(TAG, "begin preload");
         bootTimingsTraceLog.traceBegin("BeginPreload");
-        beginPreload();
+        beginPreload(fullPreload);
         bootTimingsTraceLog.traceEnd(); // BeginPreload
-        bootTimingsTraceLog.traceBegin("PreloadClasses");
-        preloadClasses();
-        bootTimingsTraceLog.traceEnd(); // PreloadClasses
-        bootTimingsTraceLog.traceBegin("CacheNonBootClasspathClassLoaders");
-        cacheNonBootClasspathClassLoaders();
-        bootTimingsTraceLog.traceEnd(); // CacheNonBootClasspathClassLoaders
-        bootTimingsTraceLog.traceBegin("PreloadResources");
-        Resources.preloadResources();
-        bootTimingsTraceLog.traceEnd(); // PreloadResources
-        Trace.traceBegin(Trace.TRACE_TAG_DALVIK, "PreloadAppProcessHALs");
-        nativePreloadAppProcessHALs();
-        Trace.traceEnd(Trace.TRACE_TAG_DALVIK);
+        if (fullPreload) {
+            bootTimingsTraceLog.traceBegin("PreloadClasses");
+            preloadClasses();
+            bootTimingsTraceLog.traceEnd(); // PreloadClasses
+            bootTimingsTraceLog.traceBegin("CacheNonBootClasspathClassLoaders");
+            cacheNonBootClasspathClassLoaders();
+            bootTimingsTraceLog.traceEnd(); // CacheNonBootClasspathClassLoaders
+            bootTimingsTraceLog.traceBegin("PreloadResources");
+            Resources.preloadResources();
+            bootTimingsTraceLog.traceEnd(); // PreloadResources
+            Trace.traceBegin(Trace.TRACE_TAG_DALVIK, "PreloadAppProcessHALs");
+            nativePreloadAppProcessHALs();
+            Trace.traceEnd(Trace.TRACE_TAG_DALVIK);
+        }
         Trace.traceBegin(Trace.TRACE_TAG_DALVIK, "PreloadGraphicsDriver");
         maybePreloadGraphicsDriver();
         Trace.traceEnd(Trace.TRACE_TAG_DALVIK);
@@ -151,7 +154,7 @@ public class ZygoteInit {
 
         // TODO: remove the try/catch and the flag read as soon as the flag is ramped and 25Q2
         // starts building from source.
-        if (preloadHttpengineInZygote()) {
+        if (fullPreload && preloadHttpengineInZygote()) {
             try {
                 HttpEngine.preload();
             } catch (NoSuchMethodError e){
@@ -165,14 +168,27 @@ public class ZygoteInit {
                 Log.d(TAG, "HttpEngine.preload() threw " + e);
             }
         }
-        // Ask the WebViewFactory to do any initialization that must run in the zygote process,
-        // for memory sharing purposes.
-        WebViewFactory.prepareWebViewInZygote();
-        endPreload();
-        warmUpJcaProviders();
+        if (fullPreload) {
+            // Ask the WebViewFactory to do any initialization that must run in the zygote process,
+            // for memory sharing purposes.
+            WebViewFactory.prepareWebViewInZygote();
+        }
+        endPreload(fullPreload);
+        warmUpJcaProviders(fullPreload);
+
+        if (!fullPreload) {
+            // run the privileged class initializers while the process is running in
+            // the zygote SELinux context
+            // noinspection unused
+            int val = android.util.DisplayMetrics.DENSITY_DEVICE_STABLE + RoSystemProperties.FACTORYTEST;
+        }
         Log.d(TAG, "end preload");
 
         sPreloadComplete = true;
+    }
+
+    static void preload(TimingsTraceLog bootTimingsTraceLog) {
+        preload(bootTimingsTraceLog, true);
     }
 
     static void lazyPreload() {
@@ -182,14 +198,14 @@ public class ZygoteInit {
         preload(new TimingsTraceLog("ZygoteInitTiming_lazy", Trace.TRACE_TAG_DALVIK));
     }
 
-    private static void beginPreload() {
+    private static void beginPreload(boolean fullPreload) {
         Log.i(TAG, "Calling ZygoteHooks.beginPreload()");
 
-        ZygoteHooks.onBeginPreload();
+        ZygoteHooks.onBeginPreload(fullPreload);
     }
 
-    private static void endPreload() {
-        ZygoteHooks.onEndPreload();
+    private static void endPreload(boolean fullPreload) {
+        ZygoteHooks.onEndPreload(fullPreload);
 
         Log.i(TAG, "Called ZygoteHooks.endPreload()");
     }
@@ -242,7 +258,7 @@ public class ZygoteInit {
      * By doing it here we avoid that each app does it when requesting a service from the provider
      * for the first time.
      */
-    private static void warmUpJcaProviders() {
+    private static void warmUpJcaProviders(boolean fullPreload) {
         long startTime = SystemClock.uptimeMillis();
         Trace.traceBegin(
                 Trace.TRACE_TAG_DALVIK, "Starting installation of AndroidKeyStoreProvider");
@@ -252,15 +268,17 @@ public class ZygoteInit {
                 + (SystemClock.uptimeMillis() - startTime) + "ms.");
         Trace.traceEnd(Trace.TRACE_TAG_DALVIK);
 
-        startTime = SystemClock.uptimeMillis();
-        Trace.traceBegin(
-                Trace.TRACE_TAG_DALVIK, "Starting warm up of JCA providers");
-        for (Provider p : Security.getProviders()) {
-            p.warmUpServiceProvision();
+        if (fullPreload) {
+            startTime = SystemClock.uptimeMillis();
+            Trace.traceBegin(
+                    Trace.TRACE_TAG_DALVIK, "Starting warm up of JCA providers");
+            for (Provider p : Security.getProviders()) {
+                p.warmUpServiceProvision();
+            }
+            Log.i(TAG, "Warmed up JCA providers in "
+                    + (SystemClock.uptimeMillis() - startTime) + "ms.");
+            Trace.traceEnd(Trace.TRACE_TAG_DALVIK);
         }
-        Log.i(TAG, "Warmed up JCA providers in "
-                + (SystemClock.uptimeMillis() - startTime) + "ms.");
-        Trace.traceEnd(Trace.TRACE_TAG_DALVIK);
     }
 
     private static boolean isExperimentEnabled(String experiment) {
@@ -822,24 +840,36 @@ public class ZygoteInit {
      */
     @UnsupportedAppUsage
     public static void main(String[] argv) {
+        try {
+            ExecSpawning.init(argv);
+        } catch (Throwable e) {
+            Log.e(TAG, "ExecSpawning init failed", e);
+            throw e;
+        }
+
         ZygoteServer zygoteServer = null;
+
+
+        boolean isExecSpawning = ExecSpawning.isExecSpawnedProcess();
 
         // Mark zygote start. This ensures that thread creation will throw
         // an error.
         ZygoteHooks.startZygoteNoThreadCreation();
 
-        // Zygote goes into its own process group.
-        try {
-            Os.setpgid(0, 0);
-        } catch (ErrnoException ex) {
-            throw new RuntimeException("Failed to setpgid(0,0)", ex);
+        if (!isExecSpawning) {
+            // Zygote goes into its own process group.
+            try {
+                Os.setpgid(0, 0);
+            } catch (ErrnoException ex) {
+                throw new RuntimeException("Failed to setpgid(0,0)", ex);
+            }
         }
 
         Runnable caller;
         try {
             // Store now for StatsLogging later.
             final long startTime = SystemClock.elapsedRealtime();
-            final boolean isRuntimeRestarted = "1".equals(
+            final boolean isRuntimeRestarted = !isExecSpawning && "1".equals(
                     SystemProperties.get("sys.boot_completed"));
 
             String bootTimeTag = Process.is64Bit() ? "Zygote64Timing" : "Zygote32Timing";
@@ -861,18 +891,22 @@ public class ZygoteInit {
                     abiList = argv[i].substring(ABI_LIST_ARG.length());
                 } else if (argv[i].startsWith(SOCKET_NAME_ARG)) {
                     zygoteSocketName = argv[i].substring(SOCKET_NAME_ARG.length());
+                } else if (argv[i].startsWith(COMMAND_FD_ARG)) {
+                    Preconditions.checkState(isExecSpawning);
+                    // handled by ExecSpawning.init()
+                    continue;
                 } else {
                     throw new RuntimeException("Unknown command line argument: " + argv[i]);
                 }
             }
 
-            final boolean isPrimaryZygote = zygoteSocketName.equals(Zygote.PRIMARY_SOCKET_NAME);
-            if (!isRuntimeRestarted) {
-                if (isPrimaryZygote) {
+            if (!isExecSpawning && !isRuntimeRestarted) {
+                ZygoteType zygoteType = ZygoteType.fromSocketName(zygoteSocketName);
+                if (zygoteType == ZygoteType.Primary) {
                     FrameworkStatsLog.write(FrameworkStatsLog.BOOT_TIME_EVENT_ELAPSED_TIME_REPORTED,
                             BOOT_TIME_EVENT_ELAPSED_TIME__EVENT__ZYGOTE_INIT_START,
                             startTime);
-                } else if (zygoteSocketName.equals(Zygote.SECONDARY_SOCKET_NAME)) {
+                } else if (zygoteType == ZygoteType.Secondary) {
                     FrameworkStatsLog.write(FrameworkStatsLog.BOOT_TIME_EVENT_ELAPSED_TIME_REPORTED,
                             BOOT_TIME_EVENT_ELAPSED_TIME__EVENT__SECONDARY_ZYGOTE_INIT_START,
                             startTime);
@@ -889,7 +923,7 @@ public class ZygoteInit {
                 bootTimingsTraceLog.traceBegin("ZygotePreload");
                 EventLog.writeEvent(LOG_BOOT_PROGRESS_PRELOAD_START,
                         SystemClock.uptimeMillis());
-                preload(bootTimingsTraceLog);
+                preload(bootTimingsTraceLog, !isExecSpawning);
                 EventLog.writeEvent(LOG_BOOT_PROGRESS_PRELOAD_END,
                         SystemClock.uptimeMillis());
                 bootTimingsTraceLog.traceEnd(); // ZygotePreload
@@ -902,11 +936,13 @@ public class ZygoteInit {
 
             bootTimingsTraceLog.traceEnd(); // ZygoteInit
 
-            Zygote.initNativeState(isPrimaryZygote);
+            final ZygoteType zygoteType = ZygoteType.fromSocketName(zygoteSocketName);
+
+            Zygote.initNativeState(zygoteType);
 
             ZygoteHooks.stopZygoteNoThreadCreation();
 
-            zygoteServer = new ZygoteServer(isPrimaryZygote);
+            zygoteServer = isExecSpawning ? new ZygoteServer() : new ZygoteServer(zygoteType);
 
             if (startSystemServer) {
                 Runnable r = forkSystemServer(abiList, zygoteSocketName, zygoteServer);
@@ -919,13 +955,13 @@ public class ZygoteInit {
                 }
             }
 
-            Log.i(TAG, "Accepting command socket connections");
+            if (!isExecSpawning) Log.i(TAG, "Accepting command socket connections");
 
             // The select loop returns early in the child process after a fork and
             // loops forever in the zygote.
             caller = zygoteServer.runSelectLoop(abiList);
         } catch (Throwable ex) {
-            Log.e(TAG, "System zygote died with fatal exception", ex);
+            Log.e(TAG, (isExecSpawning ? "Exec spawned process" : "System zygote died") + " with fatal exception", ex);
             throw ex;
         } finally {
             if (zygoteServer != null) {
@@ -951,9 +987,9 @@ public class ZygoteInit {
     }
 
     private static void waitForSecondaryZygote(String socketName) {
-        String otherZygoteName = Zygote.PRIMARY_SOCKET_NAME.equals(socketName)
-                ? Zygote.SECONDARY_SOCKET_NAME : Zygote.PRIMARY_SOCKET_NAME;
-        ZygoteProcess.waitForConnectionToZygote(otherZygoteName);
+        ZygoteType otherZygoteType = ZygoteType.Primary.getSocketName().equals(socketName)
+                ? ZygoteType.Secondary : ZygoteType.Primary;
+        ZygoteProcess.waitForConnectionToZygote(otherZygoteType);
     }
 
     static boolean isPreloadComplete() {

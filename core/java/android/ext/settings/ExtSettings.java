@@ -21,6 +21,9 @@ import java.util.function.ToIntFunction;
  */
 public class ExtSettings {
 
+    public static final BoolSysProperty EXEC_SPAWNING = new BoolSysProperty(
+            "persist.security.exec_spawn", true);
+
     public static final BoolSetting ALLOW_KEYGUARD_CAMERA = new BoolSetting(
             Setting.Scope.SYSTEM_PROPERTY, "persist.keyguard.camera", true);
 

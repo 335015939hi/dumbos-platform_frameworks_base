@@ -19,6 +19,7 @@
 
 #include "com_android_internal_os_Zygote.h"
 
+#include <android/binder_auto_utils.h>
 #include <android-base/file.h>
 #include <android-base/logging.h>
 #include <android-base/properties.h>
@@ -39,6 +40,7 @@
 #include <grp.h>
 #include <inttypes.h>
 #include <link.h>
+#include <linux/close_range.h>
 #include <malloc.h>
 #include <mntent.h>
 #include <nativehelper/JNIHelp.h>
@@ -56,12 +58,14 @@
 #include <stdlib.h>
 #include <sys/capability.h>
 #include <sys/eventfd.h>
+#include <sys/mman.h>
 #include <sys/mount.h>
 #include <sys/personality.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <sys/system_properties.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -170,6 +174,8 @@ static int gUsapPoolEventFD = -1;
  * system_server.
  */
 static int gSystemServerSocketFd = -1;
+
+static bool gIsExecSpawning = false;
 
 static constexpr int DEFAULT_DATA_DIR_PERMISSION = 0751;
 
@@ -356,6 +362,29 @@ enum RuntimeFlags : uint32_t {
     DEBUG_ENABLE_PTRACE = 1 << 25,
     ENABLE_PAGE_SIZE_APP_COMPAT = 1 << 26,
     AUDIT_OUTGOING_TRANSACTIONS = 1 << 27,
+};
+
+namespace ExtraArgsFlag {
+    static const int FORCIBLY_ENABLE_MEMORY_TAGGING = 1 << 2;
+}
+
+struct ExtraArgs {
+    uint64_t selinux_flags = 0;
+    int flags = 0;
+
+    ExtraArgs() {}
+
+    ExtraArgs(JNIEnv* env, jlongArray jlongArgs) {
+        const size_t num_jlong_args = 2;
+        jlong jlong_arr[num_jlong_args];
+        env->GetLongArrayRegion(jlongArgs, 0, num_jlong_args, (jlong *) &jlong_arr);
+        selinux_flags = (uint64_t) jlong_arr[0];
+        flags = (int) jlong_arr[1];
+    }
+
+    bool hasFlag(int flag) {
+        return flags & flag;
+    }
 };
 
 enum UnsolicitedZygoteMessageTypes : uint32_t {
@@ -915,6 +944,9 @@ static void DetachDescriptors(JNIEnv* env,
     }
 
     for (int fd : fds_to_close) {
+      if (fd == -1 && gIsExecSpawning) {
+          continue;
+      }
       ALOGV("Switching descriptor %d to /dev/null", fd);
       if (TEMP_FAILURE_RETRY(dup3(devnull_fd, fd, O_CLOEXEC)) == -1) {
         fail_fn(StringPrintf("Failed dup3() on descriptor %d: %s", fd, strerror(errno)));
@@ -1793,7 +1825,7 @@ static void BindMountStorageDirs(JNIEnv* env, jobjectArray pkg_data_info_list,
 }
 
 // Utility routine to specialize a zygote child process.
-static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, jint runtime_flags,
+static void SpecializeCommon(JNIEnv* env, ExtraArgs& extra_args, uid_t uid, gid_t gid, jintArray gids, jint runtime_flags,
                              jobjectArray rlimits, jlong permitted_capabilities,
                              jlong effective_capabilities, jlong bounding_capabilities,
                              jint mount_external, jstring managed_se_info,
@@ -2002,6 +2034,16 @@ static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, 
             break;
     }
     mallopt(M_BIONIC_SET_HEAP_TAGGING_LEVEL, heap_tagging_level);
+
+    if (extra_args.hasFlag(ExtraArgsFlag::FORCIBLY_ENABLE_MEMORY_TAGGING)) {
+        ALOGD("FORCIBLY_ENABLE_MEMORY_TAGGING is set, enabling M_BIONIC_BLOCK_HEAP_TAGGING_LEVEL_DOWNGRADE and M_BIONIC_ENABLE_SIGCHAINLIB_MTE_SIGSEGV_INTERCEPTION");
+        if (mallopt(M_BIONIC_BLOCK_HEAP_TAGGING_LEVEL_DOWNGRADE, 0) != (int) true) {
+            RuntimeAbort(env, __LINE__, "mallopt(M_BIONIC_BLOCK_HEAP_TAGGING_LEVEL_DOWNGRADE) failed");
+        }
+        if (mallopt(M_BIONIC_ENABLE_SIGCHAINLIB_MTE_SIGSEGV_INTERCEPTION, 0) != (int) true) {
+            RuntimeAbort(env, __LINE__, "mallopt(M_BIONIC_ENABLE_SIGCHAINLIB_MTE_SIGSEGV_INTERCEPTION) failed");
+        }
+    }
 
     // Now that we've used the flag, clear it so that we don't pass unknown flags to the ART
     // runtime.
@@ -2413,7 +2455,7 @@ pid_t zygote::ForkCommon(JNIEnv* env, bool is_system_server,
 
   android_fdsan_error_level fdsan_error_level = android_fdsan_get_error_level();
 
-  if (purge) {
+  if (!gIsExecSpawning && purge) {
     // Purge unused native memory in an attempt to reduce the amount of false
     // sharing with the child process.  By reducing the size of the libc_malloc
     // region shared with the child process we reduce the number of pages that
@@ -2424,7 +2466,7 @@ pid_t zygote::ForkCommon(JNIEnv* env, bool is_system_server,
     }
   }
 
-  pid_t pid = fork();
+  pid_t pid = gIsExecSpawning ? 0 : fork();
 
   if (pid == 0) {
     if (is_top_app && use_fifo_ui) {
@@ -2448,7 +2490,7 @@ pid_t zygote::ForkCommon(JNIEnv* env, bool is_system_server,
 
 #if defined(__BIONIC__) && !defined(NO_RESET_STACK_PROTECTOR)
     // Reset the stack guard for the new process.
-    android_reset_stack_guards();
+    if (!gIsExecSpawning) android_reset_stack_guards();
 #endif
 
     // The child process.
@@ -2492,6 +2534,8 @@ pid_t zygote::ForkCommon(JNIEnv* env, bool is_system_server,
     setpriority(PRIO_PROCESS, 0, PROCESS_PRIORITY_DEFAULT);
   }
 
+  gIsExecSpawning = false;
+
   return pid;
 }
 
@@ -2501,12 +2545,13 @@ static void com_android_internal_os_Zygote_nativePreApplicationInit(JNIEnv*, jcl
 
 NO_STACK_PROTECTOR
 static jint com_android_internal_os_Zygote_nativeForkAndSpecialize(
-        JNIEnv* env, jclass, jint uid, jint gid, jintArray gids, jint runtime_flags,
+        JNIEnv* env, jclass, jlongArray extra_jlong_args, jint uid, jint gid, jintArray gids, jint runtime_flags,
         jobjectArray rlimits, jint mount_external, jstring se_info, jstring nice_name,
         jintArray managed_fds_to_close, jintArray managed_fds_to_ignore, jboolean is_child_zygote,
         jstring instruction_set, jstring app_data_dir, jboolean is_top_app, jboolean use_fifo_ui,
         jobjectArray pkg_data_info_list, jobjectArray allowlisted_data_info_list,
         jboolean mount_data_dirs, jboolean mount_storage_dirs, jboolean mount_sysprop_overrides) {
+    ExtraArgs extra_args(env, extra_jlong_args);
     // Containers run without some capabilities, so drop any caps that are not available.
     jlong capabilities = zygote::CalculateCapabilities(env, uid, gid, gids, is_child_zygote) &
             GetEffectiveCapabilityMask(env);
@@ -2548,7 +2593,7 @@ static jint com_android_internal_os_Zygote_nativeForkAndSpecialize(
                                    true, is_top_app == JNI_TRUE, use_fifo_ui == JNI_TRUE);
 
     if (pid == 0) {
-        SpecializeCommon(env, uid, gid, gids, runtime_flags, rlimits, capabilities, capabilities,
+        SpecializeCommon(env, extra_args, uid, gid, gids, runtime_flags, rlimits, capabilities, capabilities,
                          bounding_capabilities, mount_external, se_info, nice_name, false,
                          is_child_zygote == JNI_TRUE, instruction_set, app_data_dir,
                          is_top_app == JNI_TRUE, pkg_data_info_list, allowlisted_data_info_list,
@@ -2586,7 +2631,8 @@ static jint com_android_internal_os_Zygote_nativeForkSystemServer(
   if (pid == 0) {
       // System server prcoess does not need data isolation so no need to
       // know pkg_data_info_list.
-      SpecializeCommon(env, uid, gid, gids, runtime_flags, rlimits, permitted_capabilities,
+      ExtraArgs extra_args;
+      SpecializeCommon(env, extra_args, uid, gid, gids, runtime_flags, rlimits, permitted_capabilities,
                        effective_capabilities, 0, MOUNT_EXTERNAL_DEFAULT, nullptr, nullptr, true,
                        false, nullptr, nullptr, /* is_top_app= */ false,
                        /* pkg_data_info_list */ nullptr,
@@ -2733,7 +2779,7 @@ static void com_android_internal_os_Zygote_nativeInstallSeccompUidGidFilter(
  * @param is_top_app  If the process is for top (high priority) application
  */
 static void com_android_internal_os_Zygote_nativeSpecializeAppProcess(
-        JNIEnv* env, jclass, jint uid, jint gid, jintArray gids, jint runtime_flags,
+        JNIEnv* env, jclass, jlongArray extra_jlong_args, jint uid, jint gid, jintArray gids, jint runtime_flags,
         jobjectArray rlimits, jint mount_external, jstring se_info, jstring nice_name,
         jboolean is_child_zygote, jstring instruction_set, jstring app_data_dir,
         jboolean is_top_app, jobjectArray pkg_data_info_list,
@@ -2743,8 +2789,9 @@ static void com_android_internal_os_Zygote_nativeSpecializeAppProcess(
     jlong capabilities = zygote::CalculateCapabilities(env, uid, gid, gids, is_child_zygote) &
             GetEffectiveCapabilityMask(env);
     jlong bounding_capabilities = zygote::CalculateBoundingCapabilities(env, uid, gid, gids);
+    ExtraArgs extra_args(env, extra_jlong_args);
 
-    SpecializeCommon(env, uid, gid, gids, runtime_flags, rlimits, capabilities, capabilities,
+    SpecializeCommon(env, extra_args, uid, gid, gids, runtime_flags, rlimits, capabilities, capabilities,
                      bounding_capabilities, mount_external, se_info, nice_name, false,
                      is_child_zygote == JNI_TRUE, instruction_set, app_data_dir,
                      is_top_app == JNI_TRUE, pkg_data_info_list, allowlisted_data_info_list,
@@ -2761,28 +2808,38 @@ static void com_android_internal_os_Zygote_nativeSpecializeAppProcess(
  * of the environment variable storing the file descriptors.
  */
 static void com_android_internal_os_Zygote_nativeInitNativeState(JNIEnv* env, jclass,
-                                                                 jboolean is_primary) {
+                                                                 jboolean is_exec_spawning,
+                                                                 jstring j_socket_name,
+                                                                 jstring j_usap_pool_socket_name) {
+  gIsExecSpawning = is_exec_spawning;
   /*
    * Obtain file descriptors created by init from the environment.
    */
 
-  gZygoteSocketFD =
-      android_get_control_socket(is_primary ? "zygote" : "zygote_secondary");
-  if (gZygoteSocketFD >= 0) {
-    ALOGV("Zygote:zygoteSocketFD = %d", gZygoteSocketFD);
-  } else {
-    ALOGE("Unable to fetch Zygote socket file descriptor");
+  if (!gIsExecSpawning) {
+    ScopedUtfChars socket_name(env, j_socket_name);
+    ScopedUtfChars usap_pool_socket_name(env, j_usap_pool_socket_name);
+
+    gZygoteSocketFD =
+        android_get_control_socket(socket_name.c_str());
+    if (gZygoteSocketFD >= 0) {
+      ALOGV("Zygote:zygoteSocketFD = %d", gZygoteSocketFD);
+    } else {
+      ALOGE("Unable to fetch Zygote socket file descriptor");
+    }
+
+    gUsapPoolSocketFD =
+        android_get_control_socket(usap_pool_socket_name.c_str());
+    if (gUsapPoolSocketFD >= 0) {
+      ALOGV("Zygote:usapPoolSocketFD = %d", gUsapPoolSocketFD);
+    } else {
+      ALOGE("Unable to fetch USAP pool socket file descriptor");
+    }
   }
 
-  gUsapPoolSocketFD =
-      android_get_control_socket(is_primary ? "usap_pool_primary" : "usap_pool_secondary");
-  if (gUsapPoolSocketFD >= 0) {
-    ALOGV("Zygote:usapPoolSocketFD = %d", gUsapPoolSocketFD);
-  } else {
-    ALOGE("Unable to fetch USAP pool socket file descriptor");
+  if (!gIsExecSpawning) {
+    initUnsolSocketToSystemServer();
   }
-
-  initUnsolSocketToSystemServer();
 
   /*
    * Security Initialization
@@ -2807,7 +2864,9 @@ static void com_android_internal_os_Zygote_nativeInitNativeState(JNIEnv* env, jc
    * Storage Initialization
    */
 
-  UnmountStorageOnInit(env);
+  if (!gIsExecSpawning) {
+    UnmountStorageOnInit(env);
+  }
 
   /*
    * Performance Initialization
@@ -3004,6 +3063,200 @@ static jint com_android_internal_os_Zygote_nativeCurrentTaggingLevel(JNIEnv* env
 #endif // defined(__aarch64__)
 }
 
+static void free_environ(char** env) {
+    for (size_t i = 0; env[i] != nullptr; ++i) {
+        free(env[i]);
+    }
+    free(env);
+}
+
+static char** clone_environ(const char*const* extra_variables) {
+    size_t count = 0;
+
+    while (environ[count] != nullptr) {
+        ++count;
+    }
+
+    size_t num_extra_vars = 0;
+    while (extra_variables[num_extra_vars] != nullptr) {
+        ++num_extra_vars;
+    }
+
+    // 1 extra slot for NULL terminator
+    char** new_environ = (char**) calloc(count + num_extra_vars + 1, sizeof(char*));
+    if (new_environ == nullptr) {
+        return nullptr;
+    }
+
+    for (size_t i = 0; i < count; ++i) {
+        new_environ[i] = strdup(environ[i]);
+        if (new_environ[i] == nullptr) {
+            free_environ(new_environ);
+            return nullptr;
+        }
+    }
+
+    for (size_t i = 0; i < num_extra_vars; ++i) {
+        new_environ[count + i] = strdup(extra_variables[i]);
+        if (new_environ[count + i] == nullptr) {
+            free_environ(new_environ);
+            return nullptr;
+        }
+    }
+
+    return new_environ;
+}
+// sigprocmask functions filter out the reserved bionic signals, which is undesirable
+static int __rt_sigprocmask(int how, const sigset64_t* new_set, sigset64_t* old_set) {
+    return (int) syscall(SYS_rt_sigprocmask, how, new_set, old_set, sizeof(sigset64_t));
+}
+
+static int fork_exec(const char*const* argv, const char*const* extra_env_vars, const int fd_to_keep,
+                     const bool enable_compat_va_39_bit) {
+    char** environment = clone_environ(extra_env_vars);
+    if (environment == nullptr) {
+        ALOGE("clone_environ failed: %#m");
+        return -1;
+    }
+
+    // Signal handlers are set at this point in 64-bit zygote since system_server is forked from it
+    // first, but 32-bit zygote won't have them set if this is the first app launch zygote command.
+    SetSignalHandlers();
+
+    sigset64_t full_sig_set;
+    sigfillset64(&full_sig_set);
+
+    sigset64_t prev_sig_set;
+
+    // ensure that no new file descriptors are racily opened by signal handlers in the child process
+    if (__rt_sigprocmask(SIG_BLOCK, &full_sig_set, &prev_sig_set) != 0) {
+        ALOGE("__rt_sigprocmask failed before fork: %#m");
+        free_environ(environment);
+        return -1;
+    }
+
+    // fork() runs bionic fork hooks which are unnecessary for this use-case
+    pid_t pid = _Fork();
+
+    if (pid != 0) {
+        // parent process
+        if (pid == -1) {
+            ALOGE("fork failed: %#m");
+        }
+        if (__rt_sigprocmask(SIG_SETMASK, &prev_sig_set, nullptr) != 0) {
+            ALOGE("__rt_sigprocmask failed in parent after fork: %#m");
+            _exit(1);
+        }
+        free_environ(environment);
+        return pid;
+    } else {
+        // Set CLOEXEC for all file descriptors except for the command file descriptor. Note that
+        // the parent process is multithreaded at fork time since it has Java daemon threads in
+        // addition to the main thread.
+        if (fd_to_keep != 0) {
+            if (close_range(0, fd_to_keep - 1, CLOSE_RANGE_CLOEXEC) != 0) {
+                async_safe_format_log(ANDROID_LOG_ERROR, "ZygoteForkExec", "close_range(CLOSE_RANGE_CLOEXEC) up to %d failed: %#m", fd_to_keep - 1);
+                _exit(1);
+            }
+        }
+        if (close_range(fd_to_keep + 1, ~0U, CLOSE_RANGE_CLOEXEC) != 0) {
+            async_safe_format_log(ANDROID_LOG_ERROR, "ZygoteForkExec", "close_range(CLOSE_RANGE_CLOEXEC) from %d failed: %#m", fd_to_keep + 1);
+            _exit(1);
+        }
+
+        if (__rt_sigprocmask(SIG_SETMASK, &prev_sig_set, nullptr) != 0) {
+            async_safe_format_log(ANDROID_LOG_ERROR, "ZygoteForkExec", "__rt_sigprocmask failed in child after fork: %#m");
+            _exit(1);
+        }
+
+#if defined(__aarch64__)
+        const int FLAG_COMPAT_VA_39_BIT = 1 << 30;
+        execveat(-1, argv[0], (char **) argv, environment, enable_compat_va_39_bit ? FLAG_COMPAT_VA_39_BIT : 0);
+        async_safe_format_log(ANDROID_LOG_ERROR, "ZygoteForkExec", "execveat failed: %#m");
+        if (errno == EINVAL) {
+            // kernel doesn't support FLAG_COMPAT_VA_39_BIT, or a different error that will
+            // be returned by execve() anyway
+            execve(argv[0], (char **) argv, environment);
+            async_safe_format_log(ANDROID_LOG_ERROR, "ZygoteForkExec", "execve failed: %#m");
+        }
+#else
+        execve(argv[0], (char **) argv, environment);
+        async_safe_format_log(ANDROID_LOG_ERROR, "ZygoteForkExec", "execve failed: %#m");
+#endif // defined(__aarch64__)
+
+        // exec failed
+        _exit(1);
+    }
+}
+
+static jint com_android_internal_os_Zygote_nativeForkExec(JNIEnv* env, jclass,
+                                                    jboolean is_64_bit,
+                                                    jboolean is_native_app_launch,
+                                                    jbyteArray command_buf,
+                                                    jboolean disable_hardened_malloc,
+                                                    jboolean enable_compat_va_39_bit) {
+    int cmd_fd = memfd_create("zygote_fork_exec_cmds", 0);
+    if (cmd_fd < 0) {
+        ALOGE("memfd_create failed: %#m");
+        return -1;
+    }
+    ndk::ScopedFileDescriptor scoped_cmd_fd(cmd_fd);
+    size_t cmd_buf_size;
+    {
+        ScopedByteArrayRO cmd(env, command_buf);
+        cmd_buf_size = cmd.size();
+        if (!android::base::WriteFully(cmd_fd, cmd.get(), cmd_buf_size)) {
+            ALOGE("WriteFully failed: %#m");
+            return -1;
+        }
+
+        if (lseek(cmd_fd, 0, SEEK_SET) != 0) {
+            ALOGE("lseek(cmd_fd) failed: %#m");
+            return -1;
+        }
+    }
+
+    char cmd_fd_arg[50];
+    snprintf(cmd_fd_arg, sizeof(cmd_fd_arg), "--command-fd=%d_%zu", cmd_fd, cmd_buf_size);
+
+    const char*const java_app_argv[] = {
+        // keep in sync with system/core/rootdir/init.zygote64.rc
+        is_64_bit ? "/system/bin/app_process64" : "/system/bin/app_process32",
+        "-Xzygote",
+        "/system/bin",
+        "--zygote",
+        cmd_fd_arg,
+        nullptr,
+    };
+    const char*const native_app_argv[] = {
+        // keep in sync with system/zygote/zygote/zygote_next.rc
+        "/system/bin/zygote_next",
+        "--name=zygote_next_exec_spawn",
+        "--species=android-native-app",
+        "--log-level=INFO",
+        cmd_fd_arg,
+        nullptr,
+    };
+
+    const char*const extra_env_vars_no_hmalloc[] = {
+        "IS_EXEC_SPAWNED_APP_PROCESS=1",
+        "DISABLE_HARDENED_MALLOC=1",
+        nullptr,
+    };
+    const char*const extra_env_vars_regular[] = {
+        "IS_EXEC_SPAWNED_APP_PROCESS=1",
+        // this variable is used to ignore the value of the GrapheneOS SELinux flag for disabling
+        // hardened_malloc, which avoids an extra open+read+close at each app process startup
+        "USE_HARDENED_MALLOC=1",
+        nullptr,
+    };
+
+    auto argv = is_native_app_launch ? native_app_argv : java_app_argv;
+    auto extra_env_vars = disable_hardened_malloc ? extra_env_vars_no_hmalloc : extra_env_vars_regular;
+
+    return fork_exec(argv, extra_env_vars, cmd_fd, enable_compat_va_39_bit);
+}
+
 static void com_android_internal_os_Zygote_nativeMarkOpenedFilesBeforePreload(JNIEnv* env, jclass) {
     // Ignore invocations when too early or too late.
     if (gPreloadFds) {
@@ -3034,8 +3287,10 @@ static void com_android_internal_os_Zygote_nativeAllowFilesOpenedByPreload(JNIEn
 }
 
 static const JNINativeMethod gMethods[] = {
+        {"nativeForkExec", "(ZZ[BZZ)I",
+         (void*)com_android_internal_os_Zygote_nativeForkExec},
         {"nativeForkAndSpecialize",
-         "(II[II[[IILjava/lang/String;Ljava/lang/String;[I[IZLjava/lang/String;Ljava/lang/"
+         "([JII[II[[IILjava/lang/String;Ljava/lang/String;[I[IZLjava/lang/String;Ljava/lang/"
          "String;ZZ[Ljava/lang/String;[Ljava/lang/String;ZZZ)I",
          (void*)com_android_internal_os_Zygote_nativeForkAndSpecialize},
         {"nativeForkSystemServer", "(II[II[[IJJ)I",
@@ -3051,10 +3306,10 @@ static const JNINativeMethod gMethods[] = {
         {"nativeAddUsapTableEntry", "(II)V",
          (void*)com_android_internal_os_Zygote_nativeAddUsapTableEntry},
         {"nativeSpecializeAppProcess",
-         "(II[II[[IILjava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/"
+         "([JII[II[[IILjava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/"
          "String;Z[Ljava/lang/String;[Ljava/lang/String;ZZZ)V",
          (void*)com_android_internal_os_Zygote_nativeSpecializeAppProcess},
-        {"nativeInitNativeState", "(Z)V",
+        {"nativeInitNativeState", "(ZLjava/lang/String;Ljava/lang/String;)V",
          (void*)com_android_internal_os_Zygote_nativeInitNativeState},
         {"nativeGetUsapPipeFDs", "()[I",
          (void*)com_android_internal_os_Zygote_nativeGetUsapPipeFDs},

@@ -31,6 +31,8 @@ public class SELinuxFlags {
     public static final long DENY_EXECUTE_ASHMEM_LIBCUTILS_DEVICE = (1 << 6);
     public static final long DENY_EXECUTE_PRIVAPP_DATA_FILE = (1 << 7);
     public static final long DENY_PROCESS_PTRACE = (1 << 8);
+    public static final long OVERRIDE_PREV_SELINUX_CTX_TO_INIT = (1 << 9);
+    public static final long DISABLE_HARDENED_MALLOC = (1 << 10);
 
     public static final long RESTRICT_MEMORY_DYN_CODE_EXEC_FLAGS =
             DENY_EXECMEM

@@ -22,6 +22,8 @@ import android.content.pm.ApplicationInfo;
 import android.net.LocalSocketAddress;
 import android.util.Pair;
 
+import com.android.internal.os.ZygoteExtraArgs;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -70,7 +72,8 @@ interface IZygoteProcess {
      * @return An object that describes the result of the attempt to start the process.
      * @throws RuntimeException on fatal start failure
      */
-    Process.ProcessStartResult start(@NonNull String processClass,
+    Process.ProcessStartResult start(@NonNull final ZygoteExtraArgs zygoteExtArgs,
+                                     @NonNull String processClass,
                                      String niceName,
                                      int uid, int gid, @Nullable int[] gids,
                                      int runtimeFlags, int mountExternal,
@@ -120,7 +123,7 @@ interface IZygoteProcess {
      * @param appInfo The ApplicationInfo used to derive the linker namespace parameters, the target
      *                SDK version, and zygotePreloadNativeLib/zygotePreloadNativeFunc from.
      */
-    ChildZygoteProcess startChildZygote(String processClass,
+    ChildZygoteProcess startChildZygote(ZygoteExtraArgs zygoteExtArgs, String processClass,
                                         String niceName,
                                         int uid, int gid, int[] gids,
                                         int runtimeFlags,
