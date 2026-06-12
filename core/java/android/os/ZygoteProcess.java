@@ -145,6 +145,8 @@ public class ZygoteProcess implements IZygoteProcess {
 
         private final List<String> mAbiList;
 
+        boolean lazyPreloadCompleted;
+
         private boolean mClosed;
 
         private ZygoteState(LocalSocketAddress zygoteSocketAddress,
@@ -791,9 +793,23 @@ public class ZygoteProcess implements IZygoteProcess {
         synchronized(mLock) {
             // The USAP pool can not be used if the application will not use the systems graphics
             // driver.  If that driver is requested use the Zygote application start path.
-            return zygoteSendArgsAndGetResult(openZygoteSocketIfNeeded(abi, zygoteExtArgs.getZygoteSelectionMode()),
-                                              zygotePolicyFlags,
-                                              argsForZygote);
+
+            ZygoteState zygoteState = openZygoteSocketIfNeeded(abi, zygoteExtArgs.getZygoteSelectionMode());
+
+            if (zygoteState == mZygoteStates[ZygoteType.Compat.ordinal()] && !zygoteState.lazyPreloadCompleted) {
+                long start = SystemClock.elapsedRealtime();
+                try {
+                    if (!preloadDefault(zygoteState)) {
+                        throw new ZygoteStartFailedEx("compat zygote preloading failed");
+                    }
+                } catch (IOException e) {
+                    throw new ZygoteStartFailedEx("compat zygote preloading failed", e);
+                }
+                Log.i(LOG_TAG, "waited " + (SystemClock.elapsedRealtime() - start) + " ms for compat zygote preloading");
+                zygoteState.lazyPreloadCompleted = true;
+            }
+
+            return zygoteSendArgsAndGetResult(zygoteState, zygotePolicyFlags, argsForZygote);
         }
     }
 
@@ -895,6 +911,7 @@ public class ZygoteProcess implements IZygoteProcess {
         }
         if (Build.SUPPORTED_64_BIT_ABIS.length > 0) {
             bootCompleted(Build.SUPPORTED_64_BIT_ABIS[0], ZygoteSelectionMode.Regular);
+            bootCompleted(Build.SUPPORTED_64_BIT_ABIS[0], ZygoteSelectionMode.PreferCompatZygote);
         }
     }
 
@@ -941,6 +958,8 @@ public class ZygoteProcess implements IZygoteProcess {
 
     private static boolean isLazilyStarted(ZygoteType type) {
         switch (type) {
+            case ZygoteType.Compat:
+                return true;
             default:
                 return false;
         }
@@ -1105,6 +1124,13 @@ public class ZygoteProcess implements IZygoteProcess {
         try {
             ZygoteState primaryZygoteState = attemptConnectionToPrimaryZygote();
             if (primaryZygoteState.matches(abi)) {
+                if (!mIsChildZygoteProcess && zsm == ZygoteSelectionMode.PreferCompatZygote) {
+                    ZygoteState compatZygoteState = attemptConnectionToZygote(ZygoteType.Compat);
+                    if (!compatZygoteState.matches(abi)) {
+                        throw new IllegalStateException("primary and compat zygotes must match same ABIs");
+                    }
+                    return compatZygoteState;
+                }
                 return primaryZygoteState;
             }
 
@@ -1179,8 +1205,14 @@ public class ZygoteProcess implements IZygoteProcess {
     public boolean preloadDefault(String abi) throws ZygoteStartFailedEx, IOException {
         synchronized (mLock) {
             ZygoteState state = openZygoteSocketIfNeeded(abi,
-                    // preloadDefault() is called only for 32-bit zygote
+                    // preloadDefault(abi) is called only for 32-bit zygote
                     ZygoteSelectionMode.Regular);
+            return preloadDefault(state);
+        }
+    }
+
+    boolean preloadDefault(ZygoteState state) throws IOException {
+        synchronized (mLock) {
             // Each query starts with the argument count (1 in this case)
             state.mZygoteOutputWriter.write("1");
             state.mZygoteOutputWriter.newLine();
