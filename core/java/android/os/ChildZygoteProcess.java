@@ -47,7 +47,7 @@ public class ChildZygoteProcess extends ZygoteProcess {
 
 
     ChildZygoteProcess(LocalSocketAddress socketAddress, int pid, int uid) {
-        super(socketAddress, null);
+        super(socketAddress);
         mPid = pid;
         mUid = uid;
         mDead = new AtomicBoolean(false);

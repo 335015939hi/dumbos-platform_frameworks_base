@@ -96,8 +96,6 @@ import android.content.pm.IPackageManager;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManagerInternal;
 import android.content.res.Resources;
-import android.ext.settings.app.AswUseExtendedVaSpace;
-import android.ext.settings.app.AswUseHardenedMalloc;
 import android.graphics.Point;
 import android.net.LocalSocket;
 import android.net.LocalSocketAddress;
@@ -120,6 +118,7 @@ import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.Trace;
 import android.os.UserHandle;
+import android.os.ZygoteProcess;
 import android.provider.DeviceConfig;
 import android.system.Os;
 import android.system.OsConstants;
@@ -137,6 +136,7 @@ import android.util.SparseBooleanArray;
 import android.util.TimeUtils;
 import android.util.proto.ProtoOutputStream;
 import android.view.Display;
+import android.webkit.WebViewZygote;
 
 import com.android.internal.annotations.CompositeRWLock;
 import com.android.internal.annotations.GuardedBy;
@@ -181,6 +181,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -2108,13 +2109,14 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
                 definingAppInfo = app.info;
             }
 
-            runtimeFlags |= Zygote.getMemorySafetyRuntimeFlags(
+            var shouldForciblyEnableMemoryTagging = new AtomicBoolean(false);
+            runtimeFlags |= Zygote.getMemorySafetyRuntimeFlags(shouldForciblyEnableMemoryTagging,
                     definingAppInfo, app.processInfo, instructionSet, mPlatformCompat);
 
             final Context ctx = mService.mContext;
             final PackageManagerInternal pmi = mService.getPackageManagerInternal();
-            final String flatExtraArgs;
-            if (hostingRecord.usesWebviewZygote()) {
+            final ZygoteExtraArgs zygoteExtArgs;
+            if (hostingRecord.usesWebviewZygote_()) {
                 // See commits fe85ed2ef53a7b1442a0e87f47e23e407e3e2b8c and b9a8666eb5504f022343fef9087135b7d937ddf8
                 String callerPkgName = app.info.packageName;
 
@@ -2134,19 +2136,12 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
 
                 GosPackageState callerPs = pmi.getGosPackageState(callerPkgName, userId);
 
-                flatExtraArgs = ZygoteExtraArgs.createFlatForWebviewProcess(ctx, userId, callerAppInfo, callerPs);
+                zygoteExtArgs = ZygoteExtraArgs.createForWebviewProcess(ctx, userId, callerAppInfo, callerPs);
             } else {
                 GosPackageState ps = pmi.getGosPackageState(definingAppInfo.packageName, userId);
 
-                flatExtraArgs = ZygoteExtraArgs.createFlat(ctx, userId, definingAppInfo, ps, app.isolated);
-
-                if (!AswUseHardenedMalloc.I.get(ctx, userId, definingAppInfo, ps)) {
-                    runtimeFlags |= Zygote.DISABLE_HARDENED_MALLOC;
-                }
-
-                if (!AswUseExtendedVaSpace.I.get(ctx, userId, definingAppInfo, ps)) {
-                    runtimeFlags |= Zygote.ENABLE_COMPAT_VA_39_BIT;
-                }
+                zygoteExtArgs = ZygoteExtraArgs.create(ctx, userId, definingAppInfo,
+                        shouldForciblyEnableMemoryTagging.get(), ps, app.isolated);
             }
 
             // the per-user SELinux context must be set
@@ -2162,9 +2157,9 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
             // the PID of the new process, or else throw a RuntimeException.
             final String entryPoint = "android.app.ActivityThread";
 
-            return startProcessLocked(hostingRecord, entryPoint, app, uid, gids,
+            return startProcessLocked(zygoteExtArgs, hostingRecord, entryPoint, app, uid, gids,
                     runtimeFlags, zygotePolicyFlags, mountExternal, seInfo, requiredAbi,
-                    instructionSet, invokeWith, startUptime, startElapsedTime, flatExtraArgs);
+                    instructionSet, invokeWith, startUptime, startElapsedTime);
         } catch (RuntimeException e) {
             Slog.e(ActivityManagerService.TAG, "Failure starting process " + app.processName, e);
 
@@ -2206,10 +2201,10 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
     }
 
     @GuardedBy("mService")
-    boolean startProcessLocked(HostingRecord hostingRecord, String entryPoint, ProcessRecord app,
+    boolean startProcessLocked(ZygoteExtraArgs zygoteExtArgs, HostingRecord hostingRecord, String entryPoint, ProcessRecord app,
             int uid, int[] gids, int runtimeFlags, int zygotePolicyFlags, int mountExternal,
             String seInfo, String requiredAbi, String instructionSet, String invokeWith,
-            long startUptime, long startElapsedTime, final String flatExtraArgs) {
+            long startUptime, long startElapsedTime) {
         app.setPendingStart(true);
         app.setRemoved(false);
         synchronized (mProcLock) {
@@ -2241,16 +2236,16 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
         if (mService.mConstants.FLAG_PROCESS_START_ASYNC) {
             if (DEBUG_PROCESSES) Slog.i(TAG_PROCESSES,
                     "Posting procStart msg for " + app.toShortString());
-            mService.mProcStartHandler.post(() -> handleProcessStart(
+            mService.mProcStartHandler.post(() -> handleProcessStart(zygoteExtArgs,
                     app, entryPoint, gids, runtimeFlags, zygotePolicyFlags, mountExternal,
-                    requiredAbi, instructionSet, invokeWith, startSeq, flatExtraArgs));
+                    requiredAbi, instructionSet, invokeWith, startSeq));
             return true;
         } else {
             try {
-                final Process.ProcessStartResult startResult = startProcess(hostingRecord,
+                final Process.ProcessStartResult startResult = startProcess(zygoteExtArgs, hostingRecord,
                         entryPoint, app,
                         uid, gids, runtimeFlags, zygotePolicyFlags, mountExternal, seInfo,
-                        requiredAbi, instructionSet, invokeWith, startUptime, flatExtraArgs);
+                        requiredAbi, instructionSet, invokeWith, startUptime);
                 handleProcessStartedLocked(app, startResult.pid, startResult.usingWrapper,
                         startSeq, false);
             } catch (RuntimeException e) {
@@ -2269,16 +2264,16 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
      *
      * <p>Note: this function doesn't hold the global AM lock intentionally.</p>
      */
-    private void handleProcessStart(final ProcessRecord app, final String entryPoint,
+    private void handleProcessStart(final ZygoteExtraArgs zygoteExtArgs, final ProcessRecord app, final String entryPoint,
             final int[] gids, final int runtimeFlags, int zygotePolicyFlags,
             final int mountExternal, final String requiredAbi, final String instructionSet,
-            final String invokeWith, final long startSeq, final String flatExtraArgs) {
+            final String invokeWith, final long startSeq) {
         final Runnable startRunnable = () -> {
             try {
-                final Process.ProcessStartResult startResult = startProcess(app.getHostingRecord(),
+                final Process.ProcessStartResult startResult = startProcess(zygoteExtArgs, app.getHostingRecord(),
                         entryPoint, app, app.getStartUid(), gids, runtimeFlags, zygotePolicyFlags,
                         mountExternal, app.getSeInfo(), requiredAbi, instructionSet, invokeWith,
-                        app.getStartTime(), flatExtraArgs);
+                        app.getStartTime());
 
                 synchronized (mService) {
                     handleProcessStartedLocked(app, startResult, startSeq);
@@ -2494,10 +2489,10 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
                 && mountMode != Zygote.MOUNT_EXTERNAL_NONE;
     }
 
-    private Process.ProcessStartResult startProcess(HostingRecord hostingRecord, String entryPoint,
+    private Process.ProcessStartResult startProcess(ZygoteExtraArgs zygoteExtArgs, HostingRecord hostingRecord, String entryPoint,
             ProcessRecord app, int uid, int[] gids, int runtimeFlags, int zygotePolicyFlags,
             int mountExternal, String seInfo, String requiredAbi, String instructionSet,
-            String invokeWith, long startTime, final String flatExtraArgs) {
+            String invokeWith, long startTime) {
         try {
             Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, "Start proc: " +
                     app.processName);
@@ -2616,31 +2611,33 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
             }
 
             final Process.ProcessStartResult startResult;
-            boolean regularZygote = false;
+            boolean regularZygote = zygoteExtArgs.shouldUseExecSpawning();
             app.mProcessGroupCreated = false;
             app.mSkipProcessGroupCreation = false;
             long forkTimeNs = SystemClock.uptimeNanos();
-            if (hostingRecord.usesWebviewZygote()) {
-                startResult = startWebView(entryPoint,
+            if (hostingRecord.usesWebviewZygote_()) {
+                ZygoteProcess zygoteProcess = zygoteExtArgs.shouldUseExecSpawning() ?
+                        Process.ZYGOTE_PROCESS : WebViewZygote.getProcess();
+                startResult = startWebView(zygoteProcess, zygoteExtArgs, entryPoint,
                         app.processName, uid, uid, gids, runtimeFlags, mountExternal,
                         app.info.targetSdkVersion, seInfo, requiredAbi, instructionSet,
                         app.info.dataDir, null, app.info.packageName,
                         app.getDisabledCompatChanges(), app.getStartSeq(),
-                        new String[]{PROC_START_SEQ_IDENT + app.getStartSeq()}, flatExtraArgs);
-            } else if (hostingRecord.usesAppZygote()) {
+                        new String[]{PROC_START_SEQ_IDENT + app.getStartSeq()});
+            } else if (hostingRecord.usesAppZygote_()) {
                 final AppZygote appZygote = createAppZygoteForProcessIfNeeded(app);
 
                 // We can't isolate app data and storage data as parent zygote already did that.
-                startResult = appZygote.startProcess(entryPoint,
+                startResult = appZygote.startProcess(zygoteExtArgs, entryPoint,
                         app.processName, uid, gids, runtimeFlags, mountExternal,
                         app.info.targetSdkVersion, seInfo, requiredAbi, instructionSet,
                         app.info.dataDir, app.info.packageName, isTopApp,
                         app.getDisabledCompatChanges(), pkgDataInfoMap,
                         allowlistedAppDataInfoMap, app.getStartSeq(),
-                        new String[]{PROC_START_SEQ_IDENT + app.getStartSeq()}, flatExtraArgs);
+                        new String[]{PROC_START_SEQ_IDENT + app.getStartSeq()});
             } else {
                 regularZygote = true;
-                startResult = Process.start(entryPoint,
+                startResult = Process.start(zygoteExtArgs, entryPoint,
                         app.processName, uid, uid, gids, runtimeFlags, mountExternal,
                         app.info.targetSdkVersion, seInfo, requiredAbi, instructionSet,
                         app.info.dataDir, invokeWith, app.info.packageName, zygotePolicyFlags,
@@ -2648,7 +2645,7 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
                         allowlistedAppDataInfoMap, bindMountAppsData, bindMountAppStorageDirs,
                         bindOverrideSysprops,
                         app.getStartSeq(),
-                        new String[]{PROC_START_SEQ_IDENT + app.getStartSeq()}, flatExtraArgs);
+                        new String[]{PROC_START_SEQ_IDENT + app.getStartSeq()});
                 // By now the process group should have been created by zygote.
                 app.mProcessGroupCreated = true;
             }
@@ -3427,7 +3424,7 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
     @GuardedBy("mService")
     private IsolatedUidRange getOrCreateIsolatedUidRangeLocked(ApplicationInfo info,
             HostingRecord hostingRecord) {
-        if (hostingRecord == null || !hostingRecord.usesAppZygote()) {
+        if (hostingRecord == null || !hostingRecord.usesAppZygote_()) {
             // Allocate an isolated UID from the global range
             return mGlobalIsolatedUids;
         } else {

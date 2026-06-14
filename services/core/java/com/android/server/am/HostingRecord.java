@@ -184,7 +184,7 @@ public final class HostingRecord {
 
     /**
      * Returns the UID of the package defining the component we want to start. Only valid
-     * when {@link #usesAppZygote()} returns true.
+     * when {@link #usesAppZygote_()} returns true.
      *
      * @return the UID of the hosting application
      */
@@ -194,7 +194,7 @@ public final class HostingRecord {
 
     /**
      * Returns the packageName of the package defining the component we want to start. Only valid
-     * when {@link #usesAppZygote()} returns true.
+     * when {@link #usesAppZygote_()} returns true.
      *
      * @return the packageName of the hosting application
      */
@@ -245,7 +245,7 @@ public final class HostingRecord {
      * @param definingUid uid of the package defining the service
      * @return The constructed HostingRecord
      */
-    public static HostingRecord byAppZygote(ComponentName hostingName, String definingPackageName,
+    public static HostingRecord byAppZygote_/* underscore was added to keep track of callers */(ComponentName hostingName, String definingPackageName,
             int definingUid, String definingProcessName) {
         return new HostingRecord(HostingRecord.HOSTING_TYPE_EMPTY, hostingName.toShortString(),
                 APP_ZYGOTE, definingPackageName, definingUid, false /* isTopApp */,
@@ -255,14 +255,14 @@ public final class HostingRecord {
     /**
      * @return whether the process should spawn from the application zygote
      */
-    public boolean usesAppZygote() {
+    public boolean usesAppZygote_() { // underscore was added to keep track of callers
         return mHostingZygote == APP_ZYGOTE;
     }
 
     /**
      * @return whether the process should spawn from the webview zygote
      */
-    public boolean usesWebviewZygote() {
+    public boolean usesWebviewZygote_() { // underscore was added to keep track of callers
         return mHostingZygote == WEBVIEW_ZYGOTE;
     }
 

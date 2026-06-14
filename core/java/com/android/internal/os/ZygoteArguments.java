@@ -16,8 +16,12 @@
 
 package com.android.internal.os;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import java.io.EOFException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * Handles argument parsing for args related to the zygote spawner.
@@ -47,7 +51,132 @@ import java.util.ArrayList;
  *   <li> [--] &lt;args for RuntimeInit &gt;
  * </ul>
  */
-class ZygoteArguments {
+class ZygoteArguments implements Parcelable {
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel p, int flags) {
+        if (android.os.Flags.isDevBuild()) {
+            int numFields = ZygoteArguments.class.getDeclaredFields().length;
+            int expectedFields = 41;
+            if (numFields != expectedFields) {
+                throw new IllegalStateException("expected " + expectedFields + " fields, got " + numFields);
+            }
+        }
+        p.writeInt(mUid);
+        p.writeBoolean(mUidSpecified);
+        p.writeInt(mGid);
+        p.writeBoolean(mGidSpecified);
+        p.writeIntArray(mGids);
+        p.writeInt(mRuntimeFlags);
+        p.writeParcelable(mExtraArgs, 0);
+        p.writeInt(mMountExternal);
+        p.writeBoolean(mTargetSdkVersionSpecified);
+        p.writeInt(mTargetSdkVersion);
+        p.writeString8(mNiceName);
+        p.writeBoolean(mCapabilitiesSpecified);
+        p.writeLong(mPermittedCapabilities);
+        p.writeLong(mEffectiveCapabilities);
+        p.writeBoolean(mSeInfoSpecified);
+        p.writeString8(mSeInfo);
+        p.writeBoolean(mUsapPoolEnabled);
+        p.writeBoolean(mUsapPoolStatusSpecified);
+        int rlimitsListSize = mRLimits != null ? mRLimits.size() : -1;
+        p.writeInt(rlimitsListSize);
+        if (rlimitsListSize > 0) {
+            for (int i = 0; i < rlimitsListSize; ++i) {
+                p.writeIntArray(mRLimits.get(i));
+            }
+        }
+        p.writeString8(mInvokeWith);
+        p.writeString8(mPackageName);
+        p.writeString8Array(mRemainingArgs);
+        p.writeBoolean(mAbiListQuery);
+        p.writeString8(mInstructionSet);
+        p.writeString8(mAppDataDir);
+        p.writeString8(mPreloadApp);
+        p.writeBoolean(mPreloadDefault);
+        p.writeBoolean(mStartChildZygote);
+        p.writeBoolean(mPidQuery);
+        p.writeBoolean(mBootCompleted);
+        p.writeString8Array(mApiDenylistExemptions);
+        p.writeInt(mHiddenApiAccessLogSampleRate);
+        p.writeInt(mHiddenApiAccessStatslogSampleRate);
+        p.writeBoolean(mIsTopApp);
+        p.writeLongArray(mDisabledCompatChanges);
+        p.writeString8Array(mPkgDataInfoList);
+        p.writeString8Array(mAllowlistedDataInfoList);
+        p.writeBoolean(mBindMountAppStorageDirs);
+        p.writeBoolean(mBindMountAppDataDirs);
+        p.writeBoolean(mBindMountSyspropOverrides);
+    }
+
+    private ZygoteArguments(Parcel p) {
+        mUid = p.readInt();
+        mUidSpecified = p.readBoolean();
+        mGid = p.readInt();
+        mGidSpecified = p.readBoolean();
+        mGids = p.createIntArray();
+        mRuntimeFlags = p.readInt();
+        mExtraArgs = p.readParcelable(ZygoteExtraArgs.class.getClassLoader(), ZygoteExtraArgs.class);
+        mMountExternal = p.readInt();
+        mTargetSdkVersionSpecified = p.readBoolean();
+        mTargetSdkVersion = p.readInt();
+        mNiceName = p.readString8();
+        mCapabilitiesSpecified = p.readBoolean();
+        mPermittedCapabilities = p.readLong();
+        mEffectiveCapabilities = p.readLong();
+        mSeInfoSpecified = p.readBoolean();
+        mSeInfo = p.readString8();
+        mUsapPoolEnabled = p.readBoolean();
+        mUsapPoolStatusSpecified = p.readBoolean();
+        int rlimitsListSize = p.readInt();
+        if (rlimitsListSize == -1) {
+            mRLimits = null;
+        } else {
+            mRLimits = new ArrayList<>(rlimitsListSize);
+            for (int i = 0; i < rlimitsListSize; ++i) {
+                mRLimits.add(p.createIntArray());
+            }
+        }
+        mInvokeWith = p.readString8();
+        mPackageName = p.readString8();
+        mRemainingArgs = p.createString8Array();
+        mAbiListQuery = p.readBoolean();
+        mInstructionSet = p.readString8();
+        mAppDataDir = p.readString8();
+        mPreloadApp = p.readString8();
+        mPreloadDefault = p.readBoolean();
+        mStartChildZygote = p.readBoolean();
+        mPidQuery = p.readBoolean();
+        mBootCompleted = p.readBoolean();
+        mApiDenylistExemptions = p.createString8Array();
+        mHiddenApiAccessLogSampleRate = p.readInt();
+        mHiddenApiAccessStatslogSampleRate = p.readInt();
+        mIsTopApp = p.readBoolean();
+        mDisabledCompatChanges = p.createLongArray();
+        mPkgDataInfoList = p.createString8Array();
+        mAllowlistedDataInfoList = p.createString8Array();
+        mBindMountAppStorageDirs = p.readBoolean();
+        mBindMountAppDataDirs = p.readBoolean();
+        mBindMountSyspropOverrides = p.readBoolean();
+    }
+
+    public static final Parcelable.Creator<ZygoteArguments> CREATOR = new Creator<>() {
+        @Override
+        public ZygoteArguments createFromParcel(Parcel source) {
+            return new ZygoteArguments(source);
+        }
+
+        @Override
+        public ZygoteArguments[] newArray(int size) {
+            return new ZygoteArguments[size];
+        }
+    };
 
     /**
      * from --setuid
@@ -72,7 +201,7 @@ class ZygoteArguments {
     int mRuntimeFlags;
 
     /**
-     * From --flat-extra-args
+     * From --gos-extra-args
      */
     ZygoteExtraArgs mExtraArgs = ZygoteExtraArgs.DEFAULT;
 
@@ -308,7 +437,10 @@ class ZygoteArguments {
                 seenRuntimeArgs = true;
             } else if (arg.startsWith("--runtime-flags=")) {
                 mRuntimeFlags = Integer.parseInt(getAssignmentValue(arg));
-            } else if (arg.startsWith(ZygoteExtraArgs.PREFIX)) {
+            } else if (arg.equals(ZygoteExtraArgs.ARG_COMPLEX_COMMAND_MARKER)) {
+                // ignored here, this arg is needed only for isSimpleForkCommand() in
+                // core/jni/com_android_internal_os_ZygoteCommandBuffer.cpp
+            } else if (arg.startsWith(ZygoteExtraArgs.ARG_PREFIX)) {
                 mExtraArgs = ZygoteExtraArgs.parse(getAssignmentValue(arg));
             } else if (arg.startsWith("--seinfo=")) {
                 if (mSeInfoSpecified) {
@@ -527,5 +659,61 @@ class ZygoteArguments {
 
     private static String[] getAssignmentList(String arg) {
         return getAssignmentValue(arg).split(",");
+    }
+
+    @Override
+    public String toString() {
+        var b = new StringBuilder("ZygoteArguments{");
+        b.append("mUid=").append(mUid);
+        b.append(", mUidSpecified=").append(mUidSpecified);
+        b.append(", mGid=").append(mGid);
+        b.append(", mGidSpecified=").append(mGidSpecified);
+        b.append(", mGids=").append(Arrays.toString(mGids));
+        b.append(", mRuntimeFlags=").append(Integer.toHexString(mRuntimeFlags));
+        b.append(", mExtraArgs=").append(mExtraArgs);
+        b.append(", mMountExternal=").append(mMountExternal);
+        b.append(", mTargetSdkVersionSpecified=").append(mTargetSdkVersionSpecified);
+        b.append(", mTargetSdkVersion=").append(mTargetSdkVersion);
+        b.append(", mNiceName=").append(mNiceName);
+        b.append(", mCapabilitiesSpecified=").append(mCapabilitiesSpecified);
+        b.append(", mPermittedCapabilities=").append(mPermittedCapabilities);
+        b.append(", mEffectiveCapabilities=").append(mEffectiveCapabilities);
+        b.append(", mSeInfoSpecified=").append(mSeInfoSpecified);
+        b.append(", mSeInfo=").append(mSeInfo);
+        b.append(", mUsapPoolEnabled=").append(mUsapPoolEnabled);
+        b.append(", mUsapPoolStatusSpecified=").append(mUsapPoolStatusSpecified);
+        if (mRLimits == null) {
+            b.append(", mRLimits=null");
+        } else {
+            b.append(", mRLimits=[");
+            for (int i = 0; i < mRLimits.size(); i++) {
+                b.append(Arrays.toString(mRLimits.get(i)));
+                if (i < mRLimits.size() - 1) b.append(", ");
+            }
+            b.append("]");
+        }
+        b.append(", mInvokeWith=").append(mInvokeWith);
+        b.append(", mPackageName=").append(mPackageName);
+        b.append(", mRemainingArgs=").append(Arrays.toString(mRemainingArgs));
+        b.append(", mAbiListQuery=").append(mAbiListQuery);
+        b.append(", mInstructionSet=").append(mInstructionSet);
+        b.append(", mAppDataDir=").append(mAppDataDir);
+        b.append(", mPreloadApp=").append(mPreloadApp);
+        b.append(", mPreloadDefault=").append(mPreloadDefault);
+        b.append(", mStartChildZygote=").append(mStartChildZygote);
+        b.append(", mPidQuery=").append(mPidQuery);
+        b.append(", mBootCompleted=").append(mBootCompleted);
+        b.append(", mApiDenylistExemptions=").append(Arrays.toString(mApiDenylistExemptions));
+        b.append(", mHiddenApiAccessLogSampleRate=").append(mHiddenApiAccessLogSampleRate);
+        b.append(", mHiddenApiAccessStatslogSampleRate=").append(mHiddenApiAccessStatslogSampleRate);
+        b.append(", mIsTopApp=").append(mIsTopApp);
+        b.append(", mDisabledCompatChanges=").append(Arrays.toString(mDisabledCompatChanges));
+        b.append(", mPkgDataInfoList=").append(Arrays.toString(mPkgDataInfoList));
+        b.append(", mAllowlistedDataInfoList=").append(Arrays.toString(mAllowlistedDataInfoList));
+        b.append(", mBindMountAppStorageDirs=").append(mBindMountAppStorageDirs);
+        b.append(", mBindMountAppDataDirs=").append(mBindMountAppDataDirs);
+        b.append(", mBindMountSyspropOverrides=").append(mBindMountSyspropOverrides);
+        b.append('}');
+        return b.toString();
     }
 }
