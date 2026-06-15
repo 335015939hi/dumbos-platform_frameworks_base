@@ -40,6 +40,8 @@ import static android.content.pm.GosPackageStateFlag.RESTRICT_STORAGE_DYN_CODE_L
 import static android.content.pm.GosPackageStateFlag.RESTRICT_STORAGE_DYN_CODE_LOADING_SUPPRESS_NOTIF;
 import static android.content.pm.GosPackageStateFlag.RESTRICT_WEBVIEW_DYN_CODE_LOADING;
 import static android.content.pm.GosPackageStateFlag.RESTRICT_WEBVIEW_DYN_CODE_LOADING_NON_DEFAULT;
+import static android.content.pm.GosPackageStateFlag.VPN_DISGUISE;
+import static android.content.pm.GosPackageStateFlag.VPN_DISGUISE_NON_DEFAULT;
 import static android.content.pm.GosPackageStateFlag.STORAGE_SCOPES_ENABLED;
 import static android.content.pm.GosPackageStateFlag.SUPPRESS_PLAY_INTEGRITY_API_NOTIF;
 import static android.content.pm.GosPackageStateFlag.USE_EXTENDED_VA_SPACE;
@@ -57,6 +59,7 @@ class GosPackageStatePermissions {
     // Permission that each package has for accessing its own GosPackageState
     private static GosPackageStatePermission selfAccessPermission;
     private static GosPackageStatePermission fullPermission;
+    private static GosPackageStatePermission systemPermission;
     private static int myPid;
     // Maps app's appId to its permission.
     // Written only during PackageManager init, no need to synchronize reads
@@ -85,6 +88,11 @@ class GosPackageStatePermissions {
 
         GosPackageStatePermission full = GosPackageStatePermission.createFull();
         fullPermission = full;
+
+        systemPermission = builder()
+            .readFlags(VPN_DISGUISE, VPN_DISGUISE_NON_DEFAULT)
+            .crossUserPermission(ALLOW_CROSS_USER_PROFILE_READS)
+            .create();
 
         grantedPermissions.put(Process.SHELL_UID, full);
         if (Build.isDebuggable()) {
@@ -141,6 +149,8 @@ class GosPackageStatePermissions {
                 FORCE_MEMTAG,
                 FORCE_MEMTAG_SUPPRESS_NOTIF,
                 ENABLE_EXPLOIT_PROTECTION_COMPAT_MODE,
+                VPN_DISGUISE_NON_DEFAULT,
+                VPN_DISGUISE,
         };
         builder()
                 .readWriteFlags(settingsReadWriteFlags)
