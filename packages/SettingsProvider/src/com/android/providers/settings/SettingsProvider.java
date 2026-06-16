@@ -4551,8 +4551,19 @@ public class SettingsProvider extends ContentProvider {
                         SETTINGS_TYPE_SECURE, mUserId, mDeviceId);
 
                 // Try an update from the current state.
-                final int oldVersion = secureSettings.getVersionLocked();
+                int oldVersion = secureSettings.getVersionLocked();
                 final int newVersion = SETTINGS_VERSION;
+
+                if (oldVersion == 236) {
+                     SettingsState systemSettings = getSystemSettingsLocked(mUserId, mDeviceId);
+                     if (systemSettings
+                            .getSettingLocked(Settings.System.TEXT_SHOW_PASSWORD)
+                            .isNull()) {
+                         Log.i(LOG_TAG, "Setting.System.TEXT_SHOW_PASSWORD is null, " +
+                                 "running adjusted 235 migration");
+                         oldVersion = 235;
+                     }
+                }
 
                 // If up do date - done.
                 if (oldVersion == newVersion) {
@@ -7201,18 +7212,27 @@ public class SettingsProvider extends ContentProvider {
                     currentVersion = 235;
                 }
 
-                // Version 235: Migrate the value of TEXT_SHOW_PASSWORD to TEXT_SHOW_PASSWORD_TOUCH.
+                // Version 235: Handle TEXT_SHOW_PASSWORD and TEXT_SHOW_PASSWORD_TOUCH.
                 if (currentVersion == 235) {
-                    final Setting showPasswordSetting =
+                    Setting showPasswordSetting =
                             systemSettings.getSettingLocked(Settings.System.TEXT_SHOW_PASSWORD);
+
+                    // Upstream variant of 235 migration discarded default value of TEXT_SHOW_PASSWORD
+                    if (showPasswordSetting.isNull()) {
+                        boolean defValue = resources.getBoolean(R.bool.def_text_show_password);
+                        systemSettings.insertSettingOverrideableByRestoreLocked(
+                                Settings.System.TEXT_SHOW_PASSWORD,
+                                defValue ? "1" : "0",
+                                null /* tag */,
+                                true /* makeDefault */,
+                                SettingsState.SYSTEM_PACKAGE_NAME);
+                        showPasswordSetting =
+                            systemSettings.getSettingLocked(Settings.System.TEXT_SHOW_PASSWORD);
+                    }
 
                     if (!showPasswordSetting.isNull()) {
                         final String lastUpdatedBy = showPasswordSetting.getPackageName();
-                        if (SettingsState.SYSTEM_PACKAGE_NAME.equals(lastUpdatedBy)) {
-                            // Skip migration and clear setting: it was set by the system during the
-                            // version 230 upgrade, not by the user.
-                            systemSettings.deleteSettingLocked(Settings.System.TEXT_SHOW_PASSWORD);
-                        } else {
+                        if (!SettingsState.SYSTEM_PACKAGE_NAME.equals(lastUpdatedBy)) {
                             // Preserve the user's custom preference for TEXT_SHOW_PASSWORD by
                             // migrating it to TEXT_SHOW_PASSWORD_TOUCH.
                             String value = showPasswordSetting.getValue();
