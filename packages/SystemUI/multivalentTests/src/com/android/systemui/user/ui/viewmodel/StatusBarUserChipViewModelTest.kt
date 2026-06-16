@@ -45,9 +45,12 @@ import com.android.systemui.user.data.repository.UserIconProvider
 import com.android.systemui.user.domain.interactor.GuestUserInteractor
 import com.android.systemui.user.domain.interactor.HeadlessSystemUserMode
 import com.android.systemui.user.domain.interactor.RefreshUsersScheduler
+import com.android.systemui.user.domain.interactor.UserLogoutInteractor
 import com.android.systemui.user.domain.interactor.UserSwitcherInteractor
 import com.android.systemui.util.mockito.mock
+import com.android.systemui.util.mockito.whenever
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
@@ -79,19 +82,22 @@ class StatusBarUserChipViewModelTest : SysuiTestCase() {
     @Mock private lateinit var resumeSessionReceiver: GuestResumeSessionReceiver
     @Mock private lateinit var resetOrExitSessionReceiver: GuestResetOrExitSessionReceiver
     @Mock private lateinit var keyguardUpdateMonitor: KeyguardUpdateMonitor
+    @Mock private lateinit var userLogoutInteractor: UserLogoutInteractor
 
     private lateinit var underTest: StatusBarUserChipViewModel
 
     private lateinit var userRepository: FakeUserRepository
     private lateinit var guestUserInteractor: GuestUserInteractor
     private lateinit var refreshUsersScheduler: RefreshUsersScheduler
-
     private val testDispatcher = UnconfinedTestDispatcher()
     private val testScope = TestScope(testDispatcher)
 
     @Before
     fun setUp() {
         MockitoAnnotations.initMocks(this)
+
+        val logoutEnabledStateFlow = MutableStateFlow<Boolean>(false)
+        whenever(userLogoutInteractor.isLogoutEnabled).thenReturn(logoutEnabledStateFlow)
 
         doAnswer { invocation ->
                 val userId = invocation.arguments[0] as Int
@@ -255,9 +261,7 @@ class StatusBarUserChipViewModelTest : SysuiTestCase() {
                     headlessSystemUserMode = headlessSystemUserMode,
                     applicationScope = testScope.backgroundScope,
                     telephonyInteractor =
-                        TelephonyInteractor(
-                            repository = FakeTelephonyRepository(),
-                        ),
+                        TelephonyInteractor(repository = FakeTelephonyRepository()),
                     broadcastDispatcher = fakeBroadcastDispatcher,
                     keyguardUpdateMonitor = keyguardUpdateMonitor,
                     backgroundDispatcher = testDispatcher,
@@ -267,7 +271,8 @@ class StatusBarUserChipViewModelTest : SysuiTestCase() {
                     guestUserInteractor = guestUserInteractor,
                     uiEventLogger = uiEventLogger,
                     userRestrictionChecker = mock(),
-                    processWrapper = ProcessWrapperFake(activityManager)
+                    processWrapper = ProcessWrapperFake(activityManager),
+                    userLogoutInteractor = userLogoutInteractor,
                 )
         )
     }
@@ -297,7 +302,7 @@ class StatusBarUserChipViewModelTest : SysuiTestCase() {
                 USER_NAME_0.text!!,
                 /* iconPath */ "",
                 /* flags */ UserInfo.FLAG_FULL,
-                /* userType */ UserManager.USER_TYPE_FULL_SYSTEM
+                /* userType */ UserManager.USER_TYPE_FULL_SYSTEM,
             )
 
         private val USER_1 =
@@ -306,7 +311,7 @@ class StatusBarUserChipViewModelTest : SysuiTestCase() {
                 USER_NAME_1.text!!,
                 /* iconPath */ "",
                 /* flags */ UserInfo.FLAG_FULL,
-                /* userType */ UserManager.USER_TYPE_FULL_SYSTEM
+                /* userType */ UserManager.USER_TYPE_FULL_SYSTEM,
             )
 
         private val USER_2 =
@@ -315,7 +320,7 @@ class StatusBarUserChipViewModelTest : SysuiTestCase() {
                 USER_NAME_2.text!!,
                 /* iconPath */ "",
                 /* flags */ UserInfo.FLAG_FULL,
-                /* userType */ UserManager.USER_TYPE_FULL_SYSTEM
+                /* userType */ UserManager.USER_TYPE_FULL_SYSTEM,
             )
     }
 }

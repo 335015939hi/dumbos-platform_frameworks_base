@@ -45,6 +45,7 @@ import com.android.systemui.user.data.repository.UserIconProvider
 import com.android.systemui.user.domain.interactor.GuestUserInteractor
 import com.android.systemui.user.domain.interactor.HeadlessSystemUserMode
 import com.android.systemui.user.domain.interactor.RefreshUsersScheduler
+import com.android.systemui.user.domain.interactor.UserLogoutInteractor
 import com.android.systemui.user.domain.interactor.UserSwitcherInteractor
 import com.android.systemui.user.legacyhelper.ui.LegacyUserUiHelper
 import com.android.systemui.user.shared.model.UserActionModel
@@ -52,6 +53,7 @@ import com.android.systemui.util.mockito.any
 import com.android.systemui.util.mockito.mock
 import com.android.systemui.util.mockito.whenever
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -80,6 +82,7 @@ class UserSwitcherViewModelTest : SysuiTestCase() {
     @Mock private lateinit var resumeSessionReceiver: GuestResumeSessionReceiver
     @Mock private lateinit var resetOrExitSessionReceiver: GuestResetOrExitSessionReceiver
     @Mock private lateinit var keyguardUpdateMonitor: KeyguardUpdateMonitor
+    @Mock private lateinit var userLogoutInteractor: UserLogoutInteractor
 
     private lateinit var underTest: UserSwitcherViewModel
 
@@ -95,6 +98,10 @@ class UserSwitcherViewModelTest : SysuiTestCase() {
         whenever(manager.canAddMoreUsers(any())).thenReturn(true)
         whenever(manager.getUserSwitchability(any()))
             .thenReturn(UserManager.SWITCHABILITY_STATUS_OK)
+
+        val logoutEnabledStateFlow = MutableStateFlow<Boolean>(false)
+        whenever(userLogoutInteractor.isLogoutEnabled).thenReturn(logoutEnabledStateFlow)
+
         overrideResource(
             com.android.internal.R.string.config_supervisedUserCreationPackage,
             SUPERVISED_USER_CREATION_PACKAGE,
@@ -114,15 +121,11 @@ class UserSwitcherViewModelTest : SysuiTestCase() {
                             UserInfo.FLAG_ADMIN or
                             UserInfo.FLAG_FULL,
                         UserManager.USER_TYPE_FULL_SYSTEM,
-                    ),
+                    )
                 )
             userRepository.setUserInfos(userInfos)
             userRepository.setSelectedUserInfo(userInfos[0])
-            userRepository.setSettings(
-                UserSwitcherSettingsModel(
-                    isUserSwitcherEnabled = true,
-                )
-            )
+            userRepository.setSettings(UserSwitcherSettingsModel(isUserSwitcherEnabled = true))
         }
 
         val refreshUsersScheduler =
@@ -169,9 +172,7 @@ class UserSwitcherViewModelTest : SysuiTestCase() {
                         headlessSystemUserMode = headlessSystemUserMode,
                         applicationScope = testScope.backgroundScope,
                         telephonyInteractor =
-                            TelephonyInteractor(
-                                repository = FakeTelephonyRepository(),
-                            ),
+                            TelephonyInteractor(repository = FakeTelephonyRepository()),
                         broadcastDispatcher = fakeBroadcastDispatcher,
                         keyguardUpdateMonitor = keyguardUpdateMonitor,
                         backgroundDispatcher = testDispatcher,
@@ -181,7 +182,8 @@ class UserSwitcherViewModelTest : SysuiTestCase() {
                         guestUserInteractor = guestUserInteractor,
                         uiEventLogger = uiEventLogger,
                         userRestrictionChecker = mock(),
-                        processWrapper = ProcessWrapperFake(activityManager)
+                        processWrapper = ProcessWrapperFake(activityManager),
+                        userLogoutInteractor = userLogoutInteractor,
                     ),
                 guestUserInteractor = guestUserInteractor,
             )
