@@ -39,6 +39,7 @@ import com.android.systemui.qs.tiles.MicrophoneToggleTile
 import com.android.systemui.qs.tiles.ModesDndTile
 import com.android.systemui.qs.tiles.ModesTile
 import com.android.systemui.qs.tiles.UiModeNightTile
+import com.android.systemui.qs.tiles.UsbTetheringTile
 import com.android.systemui.qs.tiles.WorkModeTile
 import com.android.systemui.qs.tiles.base.domain.interactor.QSTileAvailabilityInteractor
 import com.android.systemui.qs.tiles.base.shared.model.QSTileConfig
@@ -504,6 +505,21 @@ interface PolicyModule {
                 instanceId = uiEventLogger.getNewInstanceId(),
                 category = TileCategory.UTILITIES,
             )
+
+        @Provides
+        @IntoMap
+        @StringKey(UsbTetheringTile.TILE_SPEC)
+        fun provideUsbTetheringTileConfig(uiEventLogger: QsEventLogger): QSTileConfig =
+            QSTileConfig(
+                tileSpec = TileSpec.create(UsbTetheringTile.TILE_SPEC),
+                uiConfig =
+                    QSTileUIConfig.Resource(
+                        iconRes = com.android.internal.R.drawable.stat_sys_data_usb,
+                        labelRes = R.string.quick_settings_usb_tether_label,
+                    ),
+                instanceId = uiEventLogger.getNewInstanceId(),
+                category = TileCategory.CONNECTIVITY,
+            )
     }
 
     /** Inject LocationTile into tileMap in QSModule */
@@ -539,4 +555,10 @@ interface PolicyModule {
     @IntoMap
     @StringKey(BatteryShareTile.TILE_SPEC)
     fun bindBatteryShareTile(batteryShareTile: BatteryShareTile): QSTileImpl<*>
+
+    /** Inject UsbTetheringTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(UsbTetheringTile.TILE_SPEC)
+    fun bindUsbTetheringTile(usbTetheringTile: UsbTetheringTile): QSTileImpl<*>
 }
