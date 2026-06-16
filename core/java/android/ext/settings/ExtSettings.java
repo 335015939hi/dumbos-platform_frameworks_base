@@ -60,6 +60,10 @@ public class ExtSettings {
     public static final IntSetting BLUETOOTH_AUTO_OFF = new IntSetting(
             Setting.Scope.GLOBAL, Settings.Global.BLUETOOTH_AUTO_OFF, 0 /* off by default */);
 
+    // When true, only Bluetooth Low Energy works; Classic (BR/EDR) profiles are disabled.
+    public static final BoolSysProperty BLUETOOTH_BLE_ONLY = new BoolSysProperty(
+            "persist.bluetooth.ble_only", false);
+
     // The amount of time in milliseconds before a Nfc adapter is turned off
     public static final IntSetting NFC_AUTO_OFF = new IntSetting(
             Setting.Scope.GLOBAL, Settings.Global.NFC_AUTO_OFF, 0 /* off by default */);
