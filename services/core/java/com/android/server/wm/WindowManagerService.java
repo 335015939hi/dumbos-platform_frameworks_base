@@ -113,6 +113,7 @@ import static android.window.DesktopExperienceFlags.ENABLE_PRESENTATION_FOR_CONN
 import static android.window.ScreenCapture.ScreenCaptureParams.CAPTURE_MODE_REQUIRE_OPTIMIZED;
 import static android.window.ScreenCapture.ScreenCaptureParams.PROTECTED_CONTENT_POLICY_THROW_EXCEPTION;
 import static android.window.ScreenCapture.ScreenCaptureParams.SECURE_CONTENT_POLICY_THROW_EXCEPTION;
+import static android.window.ScreenCapture.ScreenCaptureParams.SECURE_CONTENT_POLICY_CAPTURE;
 import static android.window.WindowProviderService.isWindowProviderService;
 
 import static com.android.internal.protolog.WmProtoLogGroups.WM_DEBUG_ADD_REMOVE;
@@ -835,6 +836,8 @@ public class WindowManagerService extends IWindowManager.Stub
                 Settings.Secure.getUriFor(Settings.Secure.IMMERSIVE_MODE_CONFIRMATIONS);
         private final Uri mDisableSecureWindowsUri =
                 Settings.Secure.getUriFor(Settings.Secure.DISABLE_SECURE_WINDOWS);
+        private final Uri mForceScreenshotSecureWindowsUri =
+                Settings.Secure.getUriFor(Settings.Secure.FORCE_SCREENSHOT_SECURE_WINDOWS);
         private final Uri mMagnifyImeEnabledUri = Settings.Secure.getUriFor(
                 Settings.Secure.ACCESSIBILITY_MAGNIFICATION_MAGNIFY_NAV_AND_IME);
         private final Uri mPolicyControlUri =
@@ -869,6 +872,9 @@ public class WindowManagerService extends IWindowManager.Stub
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(mDisableSecureWindowsUri, false, this,
                     UserHandle.USER_ALL);
+            resolver.registerContentObserver(mForceScreenshotSecureWindowsUri, false, this,
+                    UserHandle.USER_ALL);
+
             if (com.android.server.accessibility.Flags.enableMagnificationMagnifyNavBarAndIme()) {
                 resolver.registerContentObserver(mMagnifyImeEnabledUri, false, this,
                         UserHandle.USER_ALL);
@@ -934,6 +940,11 @@ public class WindowManagerService extends IWindowManager.Stub
                 return;
             }
 
+            if (mForceScreenshotSecureWindowsUri.equals(uri)) {
+                updateForceScreenshotSecureWindows();
+                return;
+            }
+
             if (mMagnifyImeEnabledUri.equals(uri)) {
                 updateMagnifyIme();
             }
@@ -962,6 +973,7 @@ public class WindowManagerService extends IWindowManager.Stub
         void loadSettings() {
             updateMaximumObscuringOpacityForTouch();
             updateDisableSecureWindows();
+            updateForceScreenshotSecureWindows();
             updateMagnifyIme();
         }
 
@@ -1072,6 +1084,19 @@ public class WindowManagerService extends IWindowManager.Stub
             }
         }
 
+        void updateForceScreenshotSecureWindows() {
+
+            boolean forceScreenshotSecureWindows;
+            try {
+                forceScreenshotSecureWindows = Settings.Secure.getIntForUser(
+                        mContext.getContentResolver(),
+                        Settings.Secure.FORCE_SCREENSHOT_SECURE_WINDOWS, 0) != 0;
+            } catch (Settings.SettingNotFoundException e) {
+                forceScreenshotSecureWindows = false;
+            }
+            mForceScreenshotSecureWindows = forceScreenshotSecureWindows;
+        }
+        
         void updateMagnifyIme() {
             if (!com.android.server.accessibility.Flags.enableMagnificationMagnifyNavBarAndIme()) {
                 mMagnifyIme = false;
@@ -1247,6 +1272,7 @@ public class WindowManagerService extends IWindowManager.Stub
     private final ScreenRecordingCallbackController mScreenRecordingCallbackController;
 
     private volatile boolean mDisableSecureWindows = false;
+    private volatile boolean mForceScreenshotSecureWindows = false;
 
     /** Creates an instance of the WindowManagerService for the system server. */
     public static WindowManagerService main(@NonNull final Context context,
@@ -10691,10 +10717,17 @@ public class WindowManagerService extends IWindowManager.Stub
             }
         }
 
-        return new ScreenCaptureInternal.LayerCaptureArgs.Builder(
+        ScreenCaptureInternal.LayerCaptureArgs.Builder builder =
+                new ScreenCaptureInternal.LayerCaptureArgs.Builder(
                         displaySurfaceControl, captureArgs)
-                .setSourceCrop(mTmpRect)
-                .build();
+                        .setSourceCrop(mTmpRect);
+
+        if (mForceScreenshotSecureWindows) {
+            builder = builder.setSecureContentPolicy(
+                    SECURE_CONTENT_POLICY_CAPTURE);
+        }
+
+        return builder.build();
     }
 
     @Override
@@ -10890,6 +10923,10 @@ public class WindowManagerService extends IWindowManager.Stub
 
     boolean getDisableSecureWindows() {
         return mDisableSecureWindows;
+    }
+
+    boolean getForceScreenshotSecureWindows() {
+        return mForceScreenshotSecureWindows;
     }
 
     /**

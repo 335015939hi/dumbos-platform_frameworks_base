@@ -86,6 +86,7 @@ import android.app.IApplicationThread;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.ContentResolver;
 import android.graphics.Rect;
 import android.os.Binder;
 import android.os.IBinder;
@@ -123,6 +124,7 @@ import android.window.ActivityWindowInfo;
 import android.window.ClientWindowFrames;
 import android.window.ConfigurationChangeSetting;
 import android.window.InputTransferToken;
+import android.window.ScreenCapture;
 import android.window.ScreenCaptureInternal;
 import android.window.WindowContainerToken;
 
@@ -1366,6 +1368,30 @@ public class WindowManagerServiceTests extends WindowTestsBase {
         assertEquals(validRect, resultingArgs.mSourceCrop);
     }
 
+    @Test
+    public void testCaptureArgs_forceScreenshotSecureWindows() {
+        Rect displayBounds = new Rect(0, 0, 100, 200);
+        spyOn(mDisplayContent);
+        when(mDisplayContent.getBounds()).thenReturn(displayBounds);
+        ContentResolver cr = useFakeSettingsProvider();
+
+        // secureContentPolicy should be REDACT (default) when setting is disabled
+        Settings.Secure.putInt(cr, Settings.Secure.FORCE_SCREENSHOT_SECURE_WINDOWS, 0);
+        mWm.mSettingsObserver.onChange(false,
+                Settings.Secure.getUriFor(Settings.Secure.FORCE_SCREENSHOT_SECURE_WINDOWS));
+        ScreenCaptureInternal.LayerCaptureArgs resultingArgs =
+                mWm.getCaptureArgs(DEFAULT_DISPLAY, null);
+        assertEquals(ScreenCapture.ScreenCaptureParams.SECURE_CONTENT_POLICY_REDACT,
+                resultingArgs.mSecureContentPolicy);
+
+        // secureContentPolicy should be CAPTURE when setting is enabled
+        Settings.Secure.putInt(cr, Settings.Secure.FORCE_SCREENSHOT_SECURE_WINDOWS, 1);
+        mWm.mSettingsObserver.onChange(false,
+                Settings.Secure.getUriFor(Settings.Secure.FORCE_SCREENSHOT_SECURE_WINDOWS));
+        resultingArgs = mWm.getCaptureArgs(DEFAULT_DISPLAY, null);
+        assertEquals(ScreenCapture.ScreenCaptureParams.SECURE_CONTENT_POLICY_CAPTURE,
+                resultingArgs.mSecureContentPolicy);
+    }
     @Test
     public void testGrantInputChannel_sanitizeSpyWindowForApplications() {
         final Session session = mock(Session.class);
