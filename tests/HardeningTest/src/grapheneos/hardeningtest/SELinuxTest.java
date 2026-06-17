@@ -12,8 +12,6 @@ import org.junit.runner.RunWith;
 
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertEquals;
-
 @RunWith(DeviceJUnit4ClassRunner.class)
 public class SELinuxTest extends BaseHostJUnit4Test {
 
@@ -34,29 +32,6 @@ public class SELinuxTest extends BaseHostJUnit4Test {
                 throw new IllegalStateException(e);
             }
         }
-    }
-
-    private void editGosPackageState(String pkgName, int[] addFlags, int[] clearFlags) {
-        try {
-            var device = getDevice();
-            var cmd = new StringBuilder("pm edit-gos-package-state " + pkgName + " " + device.getCurrentUser());
-            for (int flag : addFlags) {
-                cmd.append(" add-flag ").append(flag);
-            }
-            for (int flag : clearFlags) {
-                cmd.append(" clear-flag ").append(flag);
-            }
-            var edRes = device.executeShellV2Command(cmd.toString());
-            assertEquals(edRes.toString(), 0L, (long) edRes.getExitCode());
-        } catch (DeviceNotAvailableException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private void setComplexFlagState(String pkgName, int flag, int nonDefaultFlag, boolean isSet) {
-        int[] addFlags = isSet ? new int[] { nonDefaultFlag, flag } : new int[] { nonDefaultFlag };
-        int[] clearFlags = isSet ? new int[0] : new int[] { flag };
-        editGosPackageState(pkgName, addFlags, clearFlags);
     }
 
     private void forEachPackage(Consumer<String> action) {
@@ -97,12 +72,12 @@ public class SELinuxTest extends BaseHostJUnit4Test {
     public void testDynamicCodeLoadingRestricted() {
         forEachPackage(pkg -> {
             for (var t : DclTestType.values()) {
-                setComplexFlagState(pkg, t.gosPsFlag, t.gosPsNonDefaultFlag, true);
+                TestUtils.setComplexFlagState(this, pkg, t.gosPsFlag, t.gosPsNonDefaultFlag, true);
                 runDeviceTest(pkg, t.testName("DclRestricted"));
 
                 if (pkg == TEST_PACKAGE_SDK_LATEST_PREINSTALLED) {
                     // check that DCL is blocked regardless of GosPackageState flags
-                    setComplexFlagState(pkg, t.gosPsFlag, t.gosPsNonDefaultFlag, false);
+                    TestUtils.setComplexFlagState(this, pkg, t.gosPsFlag, t.gosPsNonDefaultFlag, false);
                     runDeviceTest(pkg, t.testName("DclRestricted"));
                 }
             }
@@ -118,7 +93,7 @@ public class SELinuxTest extends BaseHostJUnit4Test {
             }
 
             for (var t : DclTestType.values()) {
-                setComplexFlagState(pkg, t.gosPsFlag, t.gosPsNonDefaultFlag, false);
+                TestUtils.setComplexFlagState(this, pkg, t.gosPsFlag, t.gosPsNonDefaultFlag, false);
                 runDeviceTest(pkg, t.testName("DclAllowed"));
             }
         });
@@ -132,7 +107,7 @@ public class SELinuxTest extends BaseHostJUnit4Test {
                 return;
             }
 
-            setComplexFlagState(pkg,
+            TestUtils.setComplexFlagState(this, pkg,
                 GosPackageStateFlag.BLOCK_NATIVE_DEBUGGING,
                 GosPackageStateFlag.BLOCK_NATIVE_DEBUGGING_NON_DEFAULT,
                 false);
@@ -143,7 +118,7 @@ public class SELinuxTest extends BaseHostJUnit4Test {
     @Test
     public void testPtraceDenied() {
         forEachPackage(pkg -> {
-            setComplexFlagState(pkg,
+            TestUtils.setComplexFlagState(this, pkg,
                 GosPackageStateFlag.BLOCK_NATIVE_DEBUGGING,
                 GosPackageStateFlag.BLOCK_NATIVE_DEBUGGING_NON_DEFAULT,
                 true);

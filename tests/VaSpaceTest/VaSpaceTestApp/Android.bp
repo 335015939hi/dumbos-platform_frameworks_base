@@ -1,0 +1,16 @@
+android_test_helper_app {
+    name: "VaSpaceTestApp",
+
+    srcs: [
+        "src/**/*.kt",
+    ],
+
+    platform_apis: true,
+
+    optimize: { enabled: false },
+
+    static_libs: [
+        "androidx.test.core",
+        "androidx.test.rules",
+    ],
+}
