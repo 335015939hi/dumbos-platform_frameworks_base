@@ -120,9 +120,7 @@ public class NativeZygoteProcess implements IZygoteProcess {
                                                   long startSeq,
                                                   @Nullable String[] zygoteArgs,
                                                   @Nullable String flatExtraArgs) {
-        if (flatExtraArgs != null) {
-            throw new IllegalStateException("flatExtraArgs passed to NativeZygoteProcess: " + flatExtraArgs);
-        }
+        checkFlagExtraArgs(flatExtraArgs);
 
         int pid;
         try {
@@ -155,9 +153,7 @@ public class NativeZygoteProcess implements IZygoteProcess {
                                                int uidRangeEnd,
                                                ApplicationInfo appInfo,
                                                @Nullable String flatExtraArgs) {
-        if (flatExtraArgs != null) {
-            throw new IllegalStateException("flatExtraArgs passed to NativeZygoteProcess: " + flatExtraArgs);
-        }
+        checkFlagExtraArgs(flatExtraArgs);
         // Create an unguessable address in the global abstract namespace.
         String serverAddress = processClass + "/" + UUID.randomUUID().toString();
         // The address of abstract socket should be prefixed with '@'.  LocalSocket.connect()
@@ -201,6 +197,12 @@ public class NativeZygoteProcess implements IZygoteProcess {
     @Override
     public boolean preloadApp(ApplicationInfo appInfo, String abi) {
         return false;
+    }
+
+    private static void checkFlagExtraArgs(@Nullable String flatExtraArgs) {
+        if (flatExtraArgs != null && !flatExtraArgs.equals("0")) {
+            throw new IllegalStateException("flatExtraArgs passed to NativeZygoteProcess: " + flatExtraArgs);
+        }
     }
 
     @Override
