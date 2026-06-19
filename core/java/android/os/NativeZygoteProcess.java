@@ -200,7 +200,7 @@ public class NativeZygoteProcess implements IZygoteProcess {
     }
 
     private static void checkFlagExtraArgs(@Nullable String flatExtraArgs) {
-        if (flatExtraArgs != null && !flatExtraArgs.equals("0")) {
+        if (flatExtraArgs != null && !flatExtraArgs.equals("--flat-extra-args=0")) {
             throw new IllegalStateException("flatExtraArgs passed to NativeZygoteProcess: " + flatExtraArgs);
         }
     }
