@@ -115,7 +115,16 @@ object BouncerMessageStrings {
             secureLockDevice() && secureLockDeviceEnabled ->
                 Pair(R.string.kg_prompt_title_after_secure_lock_device, wrongInputMessage)
             wrongInputMessage != 0 ->
-                Pair(wrongInputMessage, incorrectSecurityInputSecondaryMessage(fpAuthIsAllowed))
+                Pair(
+                    wrongInputMessage,
+                    // The second factor PIN bouncer is only reached after a biometric has already
+                    // succeeded, so fingerprint is never an alternative to it; don't suggest it.
+                    if (securityMode == BiometricSecondFactorPin) {
+                        0
+                    } else {
+                        incorrectSecurityInputSecondaryMessage(fpAuthIsAllowed)
+                    },
+                )
             else -> EmptyMessage
         }
     }

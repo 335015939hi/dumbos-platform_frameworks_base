@@ -365,7 +365,7 @@ public abstract class KeyguardAbsKeyInputViewController<T extends KeyguardAbsKey
         // immediately on BiometricSecondFactorPin bouncer after fingerprint auth succeeds with
         // primary bouncer already open.
         Duration lockoutEndTime = mLockPatternUtils.getLockoutEndTime(
-                mSelectedUserInteractor.getSelectedUserId());
+                mSelectedUserInteractor.getSelectedUserId(), mLockDomain);
         if (shouldLockout(lockoutEndTime)) {
             handleAttemptLockout(lockoutEndTime);
         }
