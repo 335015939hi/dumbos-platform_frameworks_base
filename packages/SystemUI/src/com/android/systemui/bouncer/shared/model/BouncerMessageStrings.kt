@@ -125,6 +125,7 @@ object BouncerMessageStrings {
             Pattern -> R.string.kg_wrong_pattern_try_again
             Password -> R.string.kg_wrong_password_try_again
             Pin -> R.string.kg_wrong_pin_try_again
+            BiometricSecondFactorPin -> R.string.kg_wrong_biometric_second_factor_pin_try_again
             else -> 0
         }
 
