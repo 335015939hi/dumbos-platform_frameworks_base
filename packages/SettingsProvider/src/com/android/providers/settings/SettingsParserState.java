@@ -92,6 +92,8 @@ class SettingsParserState {
         } else {
             if ("https://www.google.com/generate_204".equals(captivePortalHttpsUrl)) {
                 val = ConnChecksSetting.VAL_STANDARD;
+            } else if ("https://captive.apple.com".equals(captivePortalHttpsUrl)) {
+                val = ConnChecksSetting.VAL_APPLE;
             } else {
                 val = ConnChecksSetting.VAL_GRAPHENEOS;
             }

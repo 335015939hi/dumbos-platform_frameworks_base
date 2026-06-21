@@ -10,6 +10,7 @@ public class ConnChecksSetting {
     public static final int VAL_GRAPHENEOS = 0;
     public static final int VAL_STANDARD = 1;
     public static final int VAL_DISABLED = 2;
+    public static final int VAL_APPLE = 3;
     public static final int VAL_DEFAULT = VAL_GRAPHENEOS;
 
     /**
@@ -20,7 +21,7 @@ public class ConnChecksSetting {
     public static final IntSysProperty SYS_PROP = new IntSysProperty(
             "persist.sys.connectivity_checks",
             ConnChecksSetting.VAL_DEFAULT,
-            ConnChecksSetting.VAL_GRAPHENEOS, ConnChecksSetting.VAL_STANDARD, ConnChecksSetting.VAL_DISABLED
+            ConnChecksSetting.VAL_GRAPHENEOS, ConnChecksSetting.VAL_STANDARD, ConnChecksSetting.VAL_DISABLED, ConnChecksSetting.VAL_APPLE
     );
 
     public static int get() {

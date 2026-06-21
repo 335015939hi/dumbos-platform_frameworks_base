@@ -172,6 +172,7 @@ package android.ext.settings {
   public class ConnChecksSetting {
     method public static int get();
     method public static boolean put(int);
+    field public static final int VAL_APPLE = 3; // 0x3
     field public static final int VAL_DEFAULT = 0; // 0x0
     field public static final int VAL_DISABLED = 2; // 0x2
     field public static final int VAL_GRAPHENEOS = 0; // 0x0
