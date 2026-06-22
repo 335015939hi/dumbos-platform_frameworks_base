@@ -622,6 +622,9 @@ public class VpnManagerService extends IVpnManager.Stub {
                 logw("User " + userId + " has no Vpn configuration");
                 return false;
             }
+            if (!mUserManager.isUserUnlocked(userId)) {
+                return false;
+            }
             if (!vpn.setAlwaysOnPackage(packageName, lockdown, lockdownAllowlist)) {
                 return false;
             }
@@ -881,7 +884,7 @@ public class VpnManagerService extends IVpnManager.Stub {
         final int userId = UserHandle.getUserId(uid);
         synchronized (mVpns) {
             final Vpn vpn = mVpns.get(userId);
-            if (vpn == null) {
+            if (vpn == null || !mUserManager.isUserUnlocked(userId)) {
                 return;
             }
             // Legacy always-on VPN won't be affected since the package name is not set.
