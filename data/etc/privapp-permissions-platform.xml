@@ -290,6 +290,8 @@ applications that come with the platform
     </privapp-permissions>
 
     <privapp-permissions package="com.android.shell">
+        <!-- Allows triggering a local OTA install in the Updater app over ADB -->
+        <permission name="app.seamlessupdate.client.INSTALL_OTA_VIA_ADB"/>
         <!-- Needed for test only -->
         <permission name="android.permission.CAMERA_HEADLESS_SYSTEM_USER"/>
         <permission name="android.permission.MANAGE_HEALTH_DATA"/>
