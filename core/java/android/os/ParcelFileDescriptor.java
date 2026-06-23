@@ -354,7 +354,7 @@ public class ParcelFileDescriptor implements Parcelable, Closeable {
         final String path = file.getPath();
 
         if (GmsCoreFileServerClientHooks.isEnabled()) {
-            FileDescriptor override = GmsCoreFileServerClientHooks.openParcelFileDescriptorHook(path);
+            FileDescriptor override = GmsCoreFileServerClientHooks.openParcelFileDescriptorHook(path, flags);
             if (override != null) {
                 return override;
             }
