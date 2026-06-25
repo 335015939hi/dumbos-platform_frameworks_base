@@ -50,6 +50,12 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import android.view.MenuItem;
+import android.widget.PopupMenu;
+import android.app.ActivityManager;
+import android.os.UserManager;
+import android.view.ContextThemeWrapper;
+
 /**
  * Quick settings detail view for user switching.
  */
@@ -124,6 +130,25 @@ public class UserDetailView extends PseudoGridView {
             mDialogShower = shower;
         }
 
+        // GrapheneOS End Session functionality
+        private void showUserContextMenu(UserRecord user, View view) {
+            UserManager um = (UserManager)view.getContext().getSystemService(Context.USER_SERVICE);
+            if(user != null && user.info != null) {
+                boolean isUnlocked = um.isUserUnlocked(user.info.id);
+                boolean isOwner = um.isUserAdmin(user.info.id);
+                if(isUnlocked && !isOwner) {                        
+                    PopupMenu menu = new PopupMenu(view.getContext(), view);
+                    menu.getMenu().add("End Session").setOnMenuItemClickListener(i -> {
+                        ActivityManager am = (ActivityManager)view.getContext().getSystemService(Context.ACTIVITY_SERVICE);
+                        am.logoutUser(user.info.id);
+                        return true;
+                    });
+
+                    menu.show();
+                }
+            }
+        }
+
         public UserDetailItemView createUserDetailItemView(View convertView, ViewGroup parent,
                 UserRecord item) {
             UserDetailItemView v = UserDetailItemView.convertOrInflate(
@@ -134,12 +159,31 @@ public class UserDetailView extends PseudoGridView {
                 v.setOnClickListener(null);
                 v.setClickable(false);
             }
+
+            // GrapheneOS: adding the "End session" functionality to the user selection widget
+            // As it is convenient to always have an opportunity to end sessions of other users
+            v.setOnLongClickListener(view -> {
+               showUserContextMenu(item, view);
+               return true;
+            });
+
             String name = getName(mContext, item);
             if (item.picture == null) {
                 v.bind(name, getDrawable(mContext, item).mutate(), item.resolveId());
             } else {
                 int avatarSize =
                         (int) mContext.getResources().getDimension(R.dimen.qs_framed_avatar_size);
+
+                UserManager um = (UserManager)parent.getContext().getSystemService(Context.USER_SERVICE);
+                View onlineIndicator = v.findViewById(R.id.online_indicator);
+                onlineIndicator.setVisibility(View.GONE);
+                if(item != null && item.info != null) {
+                    boolean isUnlocked = um.isUserUnlocked(item.info.id);
+                    if(isUnlocked) {                        
+                        onlineIndicator.setVisibility(View.VISIBLE);
+                    }
+                }
+
                 Drawable drawable = new CircleFramedDrawable(item.picture, avatarSize);
                 drawable.setColorFilter(
                         item.isSwitchToEnabled ? null : getDisabledUserAvatarColorFilter());

@@ -32,16 +32,32 @@
         systemui:activatedTextAppearance="@style/TextAppearance.QS.UserSwitcher"
         systemui:regularTextAppearance="@style/TextAppearance.QS.UserSwitcher">
 
+    <FrameLayout
+        android:layout_width="@dimen/qs_framed_avatar_size"
+        android:layout_height="@dimen/qs_framed_avatar_size"
+        android:layout_marginBottom="7dp">
+
     <com.android.systemui.statusbar.phone.UserAvatarView
             android:id="@+id/user_picture"
-            android:layout_width="@dimen/qs_framed_avatar_size"
-            android:layout_height="@dimen/qs_framed_avatar_size"
-            android:layout_marginBottom="7dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             systemui:frameWidth="6dp"
             systemui:badgeDiameter="15dp"
             systemui:badgeMargin="5dp"
             systemui:framePadding="-1dp"
             systemui:frameColor="@color/qs_user_avatar_frame"/>
+
+    <!-- Online indicator (small dot) in the top-right corner -->
+        <View
+            android:id="@+id/online_indicator"
+            android:layout_width="16dp"   
+            android:layout_height="16dp"  
+            android:layout_gravity="top|end"
+            android:layout_marginTop="0dp"   
+            android:layout_marginEnd="0dp"   
+            android:background="@drawable/qs_user_online_circle" 
+            android:visibility="gone" />
+    </FrameLayout>
 
     <LinearLayout
             android:layout_width="wrap_content"
