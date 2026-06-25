@@ -36,6 +36,9 @@ public interface GosPackageStateFlag {
     /** @hide */ int PLAY_INTEGRITY_API_USED_AT_LEAST_ONCE = 26;
     /** @hide */ int SUPPRESS_PLAY_INTEGRITY_API_NOTIF = 27;
     /** @hide */ int BLOCK_PLAY_INTEGRITY_API = 28;
+    // flag 29 was used mic spoofing feature (not merged yet)
+    /** @hide */ int HIDE_CARRIER_INFO_NON_DEFAULT = 30;
+    /** @hide */ int HIDE_CARRIER_INFO = 31;
 
     /** @hide */
     @IntDef(value = {
@@ -64,6 +67,8 @@ public interface GosPackageStateFlag {
             PLAY_INTEGRITY_API_USED_AT_LEAST_ONCE,
             SUPPRESS_PLAY_INTEGRITY_API_NOTIF,
             BLOCK_PLAY_INTEGRITY_API,
+            HIDE_CARRIER_INFO_NON_DEFAULT,
+            HIDE_CARRIER_INFO,
     })
     @Retention(RetentionPolicy.SOURCE)
     @interface Enum {}

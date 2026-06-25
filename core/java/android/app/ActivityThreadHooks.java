@@ -4,6 +4,7 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.content.pm.GosPackageState;
 import android.content.pm.SrtPermissions;
+import android.ext.carrierinfo.HideCarrierInfo;
 import android.ext.dcl.DynCodeLoading;
 import android.location.HookedLocationManager;
 import android.os.Bundle;
@@ -42,6 +43,8 @@ class ActivityThreadHooks {
 
         DynCodeLoading.handleAppBindFlags(flags[AppBindArgs.FLAGS_IDX_DYN_CODE_LOADING]);
 
+        HideCarrierInfo.handleAppBindFlags(flags[AppBindArgs.FLAGS_IDX_HIDE_CARRIER_INFO]);
+
         return args;
     }
 
@@ -59,6 +62,7 @@ class ActivityThreadHooks {
         if (!Process.isIsolated()) {
             StorageScopesAppHooks.maybeEnable(state);
             ContactScopes.maybeEnable(ctx, state);
+            HideCarrierInfo.onGosPackageStateChanged(ctx, state);
         }
     }
 

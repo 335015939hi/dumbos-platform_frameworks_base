@@ -152,6 +152,19 @@ public class ComprehensiveCountryDetector extends CountryDetectorBase {
     }
 
     @Override
+    public Country detectCountry(boolean hideCarrierSource) {
+        if (!hideCarrierSource) {
+            return detectCountry();
+        }
+        Country result = getLastKnownLocationBasedCountry();
+        if (result == null) {
+            result = getLocaleCountry();
+        }
+        addToLogs(result);
+        return result;
+    }
+
+    @Override
     public void stop() {
         // Note: this method in this subclass called only by tests.
         Slog.i(TAG, "Stop the detector.");
