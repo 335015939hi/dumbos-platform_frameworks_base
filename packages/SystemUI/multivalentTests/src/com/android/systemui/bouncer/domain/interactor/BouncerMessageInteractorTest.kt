@@ -667,7 +667,7 @@ class BouncerMessageInteractorTest : SysuiTestCase() {
             init()
             val bouncerMessage by collectLastValue(underTest.bouncerMessage)
 
-            underTest.onPrimaryAuthLockedOut(3)
+            underTest.onPrimaryAuthLockedOut(securityMode, 3)
 
             verify(countDownTimerUtil)
                 .startTimer(eq(3000L), eq(1000L), countDownTimerCallback.capture())
@@ -696,7 +696,7 @@ class BouncerMessageInteractorTest : SysuiTestCase() {
             init()
             val bouncerMessage by collectLastValue(underTest.bouncerMessage)
 
-            underTest.onPrimaryAuthLockedOut(120L)
+            underTest.onPrimaryAuthLockedOut(securityMode, 120L)
 
             verify(countDownTimerUtil)
                 .startTimer(eq(120000L), eq(1000L), countDownTimerCallback.capture())
@@ -723,7 +723,7 @@ class BouncerMessageInteractorTest : SysuiTestCase() {
             init()
             val bouncerMessage by collectLastValue(underTest.bouncerMessage)
 
-            underTest.onPrimaryAuthLockedOut(3)
+            underTest.onPrimaryAuthLockedOut(securityMode, 3)
 
             verify(countDownTimerUtil)
                 .startTimer(eq(3000L), eq(1000L), countDownTimerCallback.capture())
@@ -755,7 +755,7 @@ class BouncerMessageInteractorTest : SysuiTestCase() {
             val bouncerMessage by collectLastValue(underTest.bouncerMessage)
 
             fun assertTextFor(timeout: Duration, expectedRes: Int, expectedCount: Long) {
-                underTest.onPrimaryAuthLockedOut(timeout.inWholeSeconds)
+                underTest.onPrimaryAuthLockedOut(securityMode, timeout.inWholeSeconds)
 
                 verify(countDownTimerUtil)
                     .startTimer(
@@ -824,7 +824,7 @@ class BouncerMessageInteractorTest : SysuiTestCase() {
             init()
             val bouncerMessage by collectLastValue(underTest.bouncerMessage)
 
-            underTest.onPrimaryAuthLockedOut(3)
+            underTest.onPrimaryAuthLockedOut(securityMode, 3)
 
             verify(countDownTimerUtil)
                 .startTimer(eq(3000L), eq(1000L), countDownTimerCallback.capture())

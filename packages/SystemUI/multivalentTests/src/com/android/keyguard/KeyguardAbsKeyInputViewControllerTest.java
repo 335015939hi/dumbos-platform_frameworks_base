@@ -217,7 +217,7 @@ public class KeyguardAbsKeyInputViewControllerTest extends SysuiTestCase {
         reset(mLockPatternUtils);
         mKeyguardAbsKeyInputViewController.onViewAttached();
         mKeyguardAbsKeyInputViewController.onResume(0);
-        verify(mLockPatternUtils).getLockoutAttemptDeadline(anyInt(), eq(Primary));
+        verify(mLockPatternUtils).getLockoutEndTime(anyInt(), eq(Primary));
     }
 
     @Test

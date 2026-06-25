@@ -334,7 +334,7 @@ class KeyguardPinViewControllerTest : SysuiTestCase() {
 
         constructPinViewController(mockKeyguardPinView)
 
-        underTest!!.handleAttemptLockout(0)
+        underTest!!.handleAttemptLockout(Duration.ZERO)
 
         verify(lockPatternUtils).getCurrentFailedPasswordAttempts(anyInt(), eq(Secondary))
     }
