@@ -1756,16 +1756,7 @@ static void BindMountSyspropOverride(fail_fn_t fail_fn, JNIEnv* env) {
 }
 
 static void BindMountExtendedSyspropOverride(fail_fn_t fail_fn, JNIEnv* env) {
-    std::string source = "/dev/__properties__/extended_override";
-    std::string target = "/dev/__properties__";
-    if (access(source.c_str(), F_OK) != 0) {
-      return;
-    }
-    if (access(target.c_str(), F_OK) != 0) {
-        return;
-    }
-    BindMount(source, target, fail_fn);
-    __system_properties_zygote_reload();
+    __system_properties_enable_extended_override();
     // see the TODO above BindMountSyspropOverride
 }
 
