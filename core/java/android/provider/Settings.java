@@ -14519,6 +14519,10 @@ public final class Settings {
                 KnownSystemPackage.SETUP_WIZARD})
         public static final String GEOCODER = "geocoder";
 
+        /** @hide */
+        @Protected(restrictReads = false, readWrite = KnownSystemPackage.SETTINGS)
+        public static final String CERT_TRANSPARENCY_DOWNLOADER = "cert_transparency_downloader";
+
         // ExtSettings END
 
         // NOTE: If you add new settings here, be sure to add them to

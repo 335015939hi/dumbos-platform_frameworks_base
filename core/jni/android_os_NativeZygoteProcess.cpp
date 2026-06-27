@@ -58,7 +58,7 @@ static std::optional<ScopedUtfChars> extract_jstring(JNIEnv* env, jstring manage
     return ScopedUtfChars(env, managed_string);
 }
 
-static void CreateSpawnParcel(flatbuffers::FlatBufferBuilder& builder, JNIEnv* env, jint uid,
+static void CreateSpawnParcel(flatbuffers::FlatBufferBuilder& builder, JNIEnv* env, jlong selinux_flags, jint uid,
                               jint gid, const char* niceNameStr, bool is_child_zygote,
                               const char* seInfoStr, const char* socketPathStr,
                               SpawnPayload payload_type, flatbuffers::Offset<void> payload) {
@@ -76,7 +76,7 @@ static void CreateSpawnParcel(flatbuffers::FlatBufferBuilder& builder, JNIEnv* e
     std::vector<uint32_t> secondary_groups;
     std::vector<RLimitData> rlimits;
     auto spawnCommon =
-            CreateSpawnCommonDirect(builder, uid, gid, niceNameStr, priority_initial,
+            CreateSpawnCommonDirect(builder, selinux_flags, uid, gid, niceNameStr, priority_initial,
                                     priority_final, cap_effective, cap_permitted, cap_inheritable,
                                     cap_bound, seInfoStr, &secondary_groups, &rlimits);
     flatbuffers::Offset<void> spawnUnion;
@@ -137,7 +137,7 @@ bool waitUntilNativeZygoteReady() {
 namespace android {
 
 static jint android_os_NativeZygoteProcess_startNativeProcess(
-        JNIEnv* env, jclass /* classObj */, jobject sockFd, jint uid, jint gid, jlong startSeq,
+        JNIEnv* env, jclass /* classObj */, jlong selinuxFlags, jobject sockFd, jint uid, jint gid, jlong startSeq,
         jstring packageName, jstring niceName, jint targetSdkVersion, jboolean startChildZygote,
         jint runtimeFlags, jstring seInfo, jboolean isTopApp) {
     int fd = jniGetFDFromFileDescriptor(env, sockFd);
@@ -158,7 +158,7 @@ static jint android_os_NativeZygoteProcess_startNativeProcess(
             CreateSpawnAndroidNativeDirect(builder, packageNamePtr, startSeq, targetSdkVersion,
                                            static_cast<unsigned>(runtimeFlags), is_top_app);
     bool is_child_zygote = startChildZygote == JNI_TRUE;
-    CreateSpawnParcel(builder, env, uid, gid, niceNamePtr, is_child_zygote, seInfoPtr,
+    CreateSpawnParcel(builder, env, selinuxFlags, uid, gid, niceNamePtr, is_child_zygote, seInfoPtr,
                       /**subspecies_data=*/nullptr, SpawnPayload_SpawnAndroidNative,
                       spawnAndroidNativeCmd.Union());
     uint8_t* buf = builder.GetBufferPointer();
@@ -174,7 +174,7 @@ static jint android_os_NativeZygoteProcess_startNativeProcess(
 }
 
 static jint android_os_NativeZygoteProcess_startNativeChildZygote(
-        JNIEnv* env, jclass /* classObj */, jobject sockFd, jint uid, jint gid, jstring niceName,
+        JNIEnv* env, jclass /* classObj */, jlong selinuxFlags, jobject sockFd, jint uid, jint gid, jstring niceName,
         jstring seInfo, jint targetSdkVersion, jint runtimeFlags, jstring serverPath,
         jint uidRangeStart, jint uidRangeEnd, jstring allowedLibPath, jstring librarySearchPaths,
         jboolean isShared, jstring zipPath, jstring nativeSharedLibPath, jstring libraryPath,
@@ -215,7 +215,7 @@ static jint android_os_NativeZygoteProcess_startNativeChildZygote(
                                                      zipPathStr, nativeSharedLibPathStr,
                                                      preloadFuncStr, uidRangeStart, uidRangeEnd);
 
-    CreateSpawnParcel(builder, env, uid, gid, niceNameStr, /**is_child_zygote=*/true, seInfoStr,
+    CreateSpawnParcel(builder, env, selinuxFlags, uid, gid, niceNameStr, /**is_child_zygote=*/true, seInfoStr,
                       serverPathStr, SpawnPayload_SpawnSubspeciesAndroidNative,
                       spawnAndroidChildZygoteCmd.Union());
 
@@ -261,10 +261,10 @@ static void android_os_NativeZygoteProcess_prewarmNativeZygote(JNIEnv* env, jcla
 static const JNINativeMethod method_table[] = {
         /* name, signature, funcPtr */
         {"nativeStartNativeProcess",
-         "(Ljava/io/FileDescriptor;IIJLjava/lang/String;Ljava/lang/String;IZILjava/lang/String;Z)I",
+         "(JLjava/io/FileDescriptor;IIJLjava/lang/String;Ljava/lang/String;IZILjava/lang/String;Z)I",
          (void*)android_os_NativeZygoteProcess_startNativeProcess},
         {"nativeStartNativeChildZygote",
-         "(Ljava/io/FileDescriptor;IILjava/lang/String;Ljava/lang/String;II"
+         "(JLjava/io/FileDescriptor;IILjava/lang/String;Ljava/lang/String;II"
          "Ljava/lang/String;IILjava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/"
          "String;Ljava/lang/String;"
          "Ljava/lang/String;)I",
