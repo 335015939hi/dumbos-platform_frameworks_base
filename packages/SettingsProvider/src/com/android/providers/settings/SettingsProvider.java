@@ -7208,11 +7208,7 @@ public class SettingsProvider extends ContentProvider {
 
                     if (!showPasswordSetting.isNull()) {
                         final String lastUpdatedBy = showPasswordSetting.getPackageName();
-                        if (SettingsState.SYSTEM_PACKAGE_NAME.equals(lastUpdatedBy)) {
-                            // Skip migration and clear setting: it was set by the system during the
-                            // version 230 upgrade, not by the user.
-                            systemSettings.deleteSettingLocked(Settings.System.TEXT_SHOW_PASSWORD);
-                        } else {
+                        if (!SettingsState.SYSTEM_PACKAGE_NAME.equals(lastUpdatedBy)) {
                             // Preserve the user's custom preference for TEXT_SHOW_PASSWORD by
                             // migrating it to TEXT_SHOW_PASSWORD_TOUCH.
                             String value = showPasswordSetting.getValue();
