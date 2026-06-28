@@ -4498,6 +4498,7 @@ public final class Settings {
             MOVED_TO_GLOBAL.add(Settings.Global.RADIO_BLUETOOTH);
             MOVED_TO_GLOBAL.add(Settings.Global.RADIO_WIMAX);
             MOVED_TO_GLOBAL.add(Settings.Global.SHOW_PROCESSES);
+            MOVED_TO_GLOBAL.add(Settings.Global.AIRPLANE_MODE_ON_BOOT);
         }
 
         /** @hide */
@@ -20600,6 +20601,12 @@ public final class Settings {
          */
         public static final String WATCH_RANGING_AVAILABLE =
                 "watch_ranging_available";
+
+        /**
+         *  Whether Airplane mode should be toggled on during boot
+         * @hide
+         */
+        public static final String AIRPLANE_MODE_ON_BOOT = "airplane_mode_on_boot";
 
         /**
          * Settings migrated from Wear OS settings provider.

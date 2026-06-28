@@ -1861,6 +1861,10 @@ public final class SystemServer implements Dumpable {
         // Before things start rolling, be sure we have decided whether
         // we are in safe mode.
         final boolean safeMode = wm.detectSafeMode();
+        boolean airplaneModeOnBoot = Settings.Global.getInt(
+            mContentResolver,
+            Settings.Global.AIRPLANE_MODE_ON_BOOT,
+            0) != 0;
         if (safeMode) {
             // If yes, immediately turn on the global setting for airplane mode.
             // Note that this does not send broadcasts at this stage because
@@ -1871,6 +1875,9 @@ public final class SystemServer implements Dumpable {
         } else if (context.getResources().getBoolean(R.bool.config_autoResetAirplaneMode)) {
             Settings.Global.putInt(context.getContentResolver(),
                     Settings.Global.AIRPLANE_MODE_ON, 0);
+        }if (airplaneModeOnBoot) {
+            Settings.Global.putInt(context.getContentResolver(),
+                    Settings.Global.AIRPLANE_MODE_ON, 1);
         }
 
         StatusBarManagerService statusBar = null;
@@ -3422,12 +3429,12 @@ public final class SystemServer implements Dumpable {
             // TODO: This may actually be too late if radio firmware already started leaking
             // RF before the respective services start. However, fixing this requires changes
             // to radio firmware and interfaces.
-            if (safeMode) {
-                t.traceBegin("EnableAirplaneModeInSafeMode");
+            if (safeMode || airplaneModeOnBoot) {
+                t.traceBegin("EnableAirplaneModeInSafeMode: " + safeMode + " EnableAirplaneModeOnBoot: " + airplaneModeOnBoot);
                 try {
                     connectivityF.setAirplaneMode(true);
                 } catch (Throwable e) {
-                    reportWtf("enabling Airplane Mode during Safe Mode bootup", e);
+                    reportWtf("enabling Airplane Mode during Safe Mode bootup: " + safeMode + " EnableAirplaneModeOnBoot: " + airplaneModeOnBoot, e);
                 }
                 t.traceEnd();
             }
