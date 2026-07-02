@@ -28,6 +28,7 @@ import static android.content.pm.GosPackageStateFlag.BLOCK_NATIVE_DEBUGGING_SUPP
 import static android.content.pm.GosPackageStateFlag.BLOCK_PLAY_INTEGRITY_API;
 import static android.content.pm.GosPackageStateFlag.CONTACT_SCOPES_ENABLED;
 import static android.content.pm.GosPackageStateFlag.ENABLE_EXPLOIT_PROTECTION_COMPAT_MODE;
+import static android.content.pm.GosPackageStateFlag.HIDE_LOCATION_INDICATOR;
 import static android.content.pm.GosPackageStateFlag.FORCE_MEMTAG;
 import static android.content.pm.GosPackageStateFlag.FORCE_MEMTAG_NON_DEFAULT;
 import static android.content.pm.GosPackageStateFlag.FORCE_MEMTAG_SUPPRESS_NOTIF;
@@ -108,7 +109,7 @@ class GosPackageStatePermissions {
                 .crossUserPermission(ALLOW_CROSS_USER_PROFILE_READS)
                 .apply(ksp.launcher, computer);
         builder()
-                .readWriteFlags(STORAGE_SCOPES_ENABLED, CONTACT_SCOPES_ENABLED)
+                .readWriteFlags(STORAGE_SCOPES_ENABLED, CONTACT_SCOPES_ENABLED, HIDE_LOCATION_INDICATOR)
                 .readWriteFields(FIELD_STORAGE_SCOPES, FIELD_CONTACT_SCOPES,
                         FIELD_PACKAGE_FLAGS)
                 // in some cases PermissionController handles user profile from profile parent user
@@ -119,6 +120,9 @@ class GosPackageStatePermissions {
                 .readWriteFlag(SUPPRESS_PLAY_INTEGRITY_API_NOTIF)
                 .readWriteFields(FIELD_PACKAGE_FLAGS)
                 .apply(GmsCompatApp.PKG_NAME, computer);
+        builder()
+                .readFlags(HIDE_LOCATION_INDICATOR)
+                .apply(ksp.systemUi, computer);
 
         @GosPackageStateFlag.Enum int[] settingsReadWriteFlags = {
                 ALLOW_ACCESS_TO_OBB_DIRECTORY,

@@ -4382,6 +4382,7 @@ package android.content.pm {
 
   public interface GosPackageStateFlag {
     field public static final int CONTACT_SCOPES_ENABLED = 5; // 0x5
+    field public static final int HIDE_LOCATION_INDICATOR = 29; // 0x1d
     field public static final int STORAGE_SCOPES_ENABLED = 0; // 0x0
   }
 

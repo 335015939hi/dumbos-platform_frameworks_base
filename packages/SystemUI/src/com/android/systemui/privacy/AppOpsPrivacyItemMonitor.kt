@@ -39,6 +39,8 @@ import com.android.systemui.util.concurrency.DelayableExecutor
 import com.android.systemui.util.withIncreasedIndent
 import java.io.PrintWriter
 import javax.inject.Inject
+import android.content.pm.GosPackageState
+import android.content.pm.GosPackageStateFlag
 
 /**
  * Monitors privacy items backed by app ops:
@@ -432,11 +434,14 @@ constructor(
             if (result) {
                 synchronized(lock) { hasNonSystemForegroundLocationAccess = true }
             }
-            return result
+            // must return false when HIDE_LOCATION_INDICATOR flag is set
+            // this hides the location indicator (green dot) without preventing logging of location access
+            return result && !isHideLocationIndicatorFlagSet(item)
         }
         if (item.code == AppOpsManager.OP_MONITOR_HIGH_POWER_LOCATION) {
             synchronized(lock) { hasHighPowerLocationAccess = true }
         }
+        // dont need to check hide location indicator as it only shows for fine location access
         return true
     }
 
@@ -498,6 +503,16 @@ constructor(
             }
         }
         return false
+    }
+
+    private fun isHideLocationIndicatorFlagSet(item: AppOpItem): Boolean {
+        try {
+            val userId = UserHandle.getUserId(item.uid)
+            val packageState = GosPackageState.get(item.packageName, userId)
+            return packageState.hasFlag(GosPackageStateFlag.HIDE_LOCATION_INDICATOR)
+        } catch (_: Exception) {
+            return false
+        }
     }
 
     override fun dump(pw: PrintWriter, args: Array<out String>) {
