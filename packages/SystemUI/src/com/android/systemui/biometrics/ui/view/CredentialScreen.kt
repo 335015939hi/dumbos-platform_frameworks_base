@@ -54,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.theme.PlatformTheme
+import com.android.internal.widget.LockPatternUtils
 import com.android.internal.widget.LockPatternView
 import com.android.systemui.biometrics.domain.interactor.BiometricPromptView
 import com.android.systemui.biometrics.domain.model.BiometricOperationInfo
@@ -179,12 +180,17 @@ fun CredentialScreen(
                                 }
                                 arr
                             }
+                            val isPinEnhancedPrivacyEnabled =
+                                androidx.compose.runtime.remember(userId) {
+                                    LockPatternUtils(context).isPinEnhancedPrivacyEnabled(userId)
+                                }
                             CredentialPinView(
                                 onVerify = verifyPinPassAction,
                                 onSuccess = { credential -> handleSuccess(credential) },
                                 onPinPress = viewModel::performPinPressFeedback,
                                 isVisible = currentView == BiometricPromptView.CREDENTIAL,
                                 digitMap = digitMap,
+                                isPinEnhancedPrivacyEnabled = isPinEnhancedPrivacyEnabled,
                                 error = errorMessage,
                             )
                         }
