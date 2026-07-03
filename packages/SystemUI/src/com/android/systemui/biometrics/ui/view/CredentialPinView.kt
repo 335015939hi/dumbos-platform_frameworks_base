@@ -164,7 +164,7 @@ fun CredentialPinView(
             },
             isInputEnabled = isVisible,
             deleteButtonAppearance = ActionButtonAppearance.Shown,
-            digitMap,
+            digitMap = digitMap,
         )
     }
 }
