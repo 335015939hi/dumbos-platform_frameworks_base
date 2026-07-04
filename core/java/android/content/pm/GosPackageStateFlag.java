@@ -36,6 +36,8 @@ public interface GosPackageStateFlag {
     /** @hide */ int PLAY_INTEGRITY_API_USED_AT_LEAST_ONCE = 26;
     /** @hide */ int SUPPRESS_PLAY_INTEGRITY_API_NOTIF = 27;
     /** @hide */ int BLOCK_PLAY_INTEGRITY_API = 28;
+    /** @hide */ int SUPPRESS_MISSING_PLAY_GAMES_NOTIF = 29;
+
 
     /** @hide */
     @IntDef(value = {
@@ -64,6 +66,7 @@ public interface GosPackageStateFlag {
             PLAY_INTEGRITY_API_USED_AT_LEAST_ONCE,
             SUPPRESS_PLAY_INTEGRITY_API_NOTIF,
             BLOCK_PLAY_INTEGRITY_API,
+            SUPPRESS_MISSING_PLAY_GAMES_NOTIF,
     })
     @Retention(RetentionPolicy.SOURCE)
     @interface Enum {}
