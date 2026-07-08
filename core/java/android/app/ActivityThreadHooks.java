@@ -12,6 +12,7 @@ import android.os.Process;
 import android.util.Log;
 
 import com.android.internal.app.ContactScopes;
+import com.android.internal.app.GservicesFlags;
 import com.android.internal.app.StorageScopesAppHooks;
 import com.android.internal.gmscompat.GmsHooks;
 import com.android.internal.util.Preconditions;
@@ -19,6 +20,8 @@ import com.android.internal.util.Preconditions;
 import java.util.Objects;
 
 class ActivityThreadHooks {
+
+    private static final String GSERVICES_FLAGS_TAG = "GservicesFlags";
 
     @Nullable // null during the early part of app process init
     private static volatile Context appContext;
@@ -44,6 +47,14 @@ class ActivityThreadHooks {
         HookedLocationManager.setFlags(flags[AppBindArgs.FLAGS_IDX_HOOKED_LOCATION_MANAGER]);
 
         DynCodeLoading.handleAppBindFlags(flags[AppBindArgs.FLAGS_IDX_DYN_CODE_LOADING]);
+
+        if (flags[AppBindArgs.FLAGS_IDX_GSERVICES_FLAGS_REDIRECT] != 0) {
+            if (Log.isLoggable(GSERVICES_FLAGS_TAG, Log.VERBOSE)) {
+                Log.v(GSERVICES_FLAGS_TAG, "enabling Gservices flags redirect for "
+                        + appBindData.appInfo.packageName);
+            }
+            GservicesFlags.enable();
+        }
 
         return args;
     }
