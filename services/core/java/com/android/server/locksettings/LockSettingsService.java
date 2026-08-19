@@ -1972,6 +1972,9 @@ public class LockSettingsService extends ILockSettings.Stub {
             throw new UnsupportedOperationException(
                     "This operation requires secure lock screen feature");
         }
+        if (isUserSecure(userId)) {
+            throw new SecurityException("Lock credential change is not permitted");
+        }
         if (!hasPermission(ACCESS_KEYGUARD_SECURE_STORAGE)
                 && !hasPermission(SET_AND_VERIFY_LOCKSCREEN_CREDENTIALS)) {
             if (hasPermission(SET_INITIAL_LOCK) && savedCredential.isNone() &&
