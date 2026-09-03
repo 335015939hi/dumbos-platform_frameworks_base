@@ -215,8 +215,26 @@ class PackageManagerShellCommand extends ShellCommand {
         mDomainVerificationShell = domainVerificationShell;
     }
 
+    //TONY dumbos
+    private boolean checkPmShellCallerAllowed(){
+      final int uid=Binder.getCallingUid();
+      final int pid=Binder.getCallingPid();
+      if(uid==0){
+        return true;
+      }
+      getErrPrintWriter().println(
+            "Error: package manager shell access denied for uid " + uid);
+
+    Slog.w(TAG, "Blocked pm shell command from uid=" + uid
+            + " pid=" + pid);
+    return false;
+    }
+
     @Override
     public int onCommand(String cmd) {
+        if(!checkPmShellCallerAllowed()){
+          return 13;
+        }
         if (cmd == null) {
             return handleDefaultCommands(cmd);
         }

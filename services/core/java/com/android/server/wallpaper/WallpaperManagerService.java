@@ -3240,6 +3240,8 @@ public class WallpaperManagerService extends IWallpaperManager.Stub
             throw new IllegalArgumentException(msg);
         }
 
+        which &= ~FLAG_LOCK;
+
         if (!isWallpaperSupported(callingPackage) || !isSetWallpaperAllowed(callingPackage)) {
             return null;
         }

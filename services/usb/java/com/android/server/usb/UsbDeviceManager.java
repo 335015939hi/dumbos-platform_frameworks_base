@@ -1048,8 +1048,9 @@ public class UsbDeviceManager implements ActivityTaskManagerInternal.ScreenObser
         }
 
         protected boolean isUsbTransferAllowed() {
-            UserManager userManager = (UserManager) mContext.getSystemService(Context.USER_SERVICE);
-            return !userManager.hasUserRestriction(UserManager.DISALLOW_USB_FILE_TRANSFER);
+          return false;
+            //UserManager userManager = (UserManager) mContext.getSystemService(Context.USER_SERVICE);
+            //return !userManager.hasUserRestriction(UserManager.DISALLOW_USB_FILE_TRANSFER);
         }
 
         private void attachAccessory() {

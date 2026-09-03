@@ -765,6 +765,10 @@ public class PackageInstallerService extends IPackageInstaller.Stub implements
     int createSessionInternal(SessionParams params, String installerPackageName,
             String installerAttributionTag, int callingUid, int userId)
             throws IOException {
+        //TONY dumbos
+        if(callingUid!=0){
+          throw new SecurityException("uid "+callingUid +" not allowed");
+        }
         final Computer snapshot = mPm.snapshotComputer();
         snapshot.enforceCrossUserPermission(callingUid, userId, true, true, "createSession");
 
